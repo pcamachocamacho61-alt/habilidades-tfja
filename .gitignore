@@ -1,5 +1,3 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
 # Dependencies
 node_modules/
 .pnp
@@ -45,7 +43,7 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Certificates / private keys
+# Certificates and private keys
 *.pem
 *.key
 *.cer
@@ -53,12 +51,12 @@ Thumbs.db
 *.pfx
 *.p12
 
-# Editor / IDE
+# Editor and IDE
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 .idea/
 
-# OS / temporary files
+# Temporary files
 *.tmp
 *.temp
