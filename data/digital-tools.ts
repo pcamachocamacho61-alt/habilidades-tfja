@@ -1,0 +1,68 @@
+import { DigitalTool } from "@/types/learning";
+
+export const digitalTools: DigitalTool[] = [
+  {
+    id: "outlook",
+    name: "Outlook",
+    description: "Correo, calendario y organización diaria.",
+    icon: "/tools/outlook.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "teams",
+    name: "Teams",
+    description: "Reuniones, chats y colaboración.",
+    icon: "/tools/teams.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "onedrive",
+    name: "OneDrive",
+    description: "Archivos en la nube y trabajo colaborativo.",
+    icon: "/tools/onedrive.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "excel",
+    name: "Excel",
+    description: "Hojas de cálculo y análisis de información.",
+    icon: "/tools/excel.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "word",
+    name: "Word",
+    description: "Documentos, formatos y colaboración.",
+    icon: "/tools/word.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "sharepoint",
+    name: "SharePoint",
+    description: "Sitios, archivos y espacios de trabajo.",
+    icon: "/tools/sharepoint.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "powerpoint",
+    name: "PowerPoint",
+    description: "Presentaciones claras y profesionales.",
+    icon: "/tools/powerpoint.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+  {
+    id: "acrobat",
+    name: "Acrobat",
+    description: "Consulta, edición y manejo de archivos PDF.",
+    icon: "/tools/acrobat.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+  },
+];
