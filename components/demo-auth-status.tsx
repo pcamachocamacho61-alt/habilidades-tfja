@@ -11,9 +11,9 @@ type DemoUser = {
 const DEMO_USER_KEY = "habilidades-tfja:demo-user";
 
 const DEMO_USER: DemoUser = {
-  name: "Pedro Camacho",
-  email: "pedro.camacho@tfja.gob.mx",
-  initials: "PC",
+   name: "Miguel Ángel",
+  email: "miguel.bernalg@tfja.gob.mx",
+  initials: "MA",
 };
 
 export function DemoAuthStatus() {

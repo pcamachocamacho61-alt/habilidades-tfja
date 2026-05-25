@@ -94,11 +94,11 @@ export function ProfilePanel() {
 
             <div>
               <h2 className="text-lg font-black text-[#061b3a]">
-                {user?.name ?? "Pedro Camacho"}
+                {user?.name ?? "Miguel Ángel"}
               </h2>
 
               <p className="text-sm text-slate-500">
-                {user?.email ?? "pedro.camacho@tfja.gob.mx"}
+                {user?.email ?? "miguel.bernalg@tfja.gob.mx"}
               </p>
             </div>
           </div>
