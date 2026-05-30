@@ -22,7 +22,10 @@ export type FinalEvaluation = {
   maxAttempts: number;
   questions: EvaluationQuestion[];
 };
-
+export type CheckpointEvaluation = {
+  minimumCorrectAnswers: number;
+  questions: EvaluationQuestion[];
+};
 export type DigitalTool = {
   id: string;
   name: string;
@@ -30,6 +33,7 @@ export type DigitalTool = {
   icon: string;
   descubreProgress: number;
   potenciaProgress: number;
+  status?: "active" | "coming-soon";
 };
 
 export type LearningStep = {
@@ -40,16 +44,20 @@ export type LearningStep = {
   block: 1 | 2 | 3;
   type: StepType;
   estimatedTime: string;
-  content: {
-    eyebrow: string;
-    title: string;
-    description: string;
-    bullets: string[];
-    image?: string;
-    gif?: string;
-    video?: string;
-    supportMaterials?: SupportMaterial[];
-    evaluation?: EvaluationQuestion;
-    finalEvaluation?: FinalEvaluation;
-  };
+content: {
+  eyebrow: string;
+  title: string;
+  description: string;
+  bullets: string[];
+  image?: string;
+  gif?: string;
+  video?: string;
+  imageFirst?: boolean;
+  hideDescription?: boolean;
+  bulletsTitle?: string;
+  supportMaterials?: SupportMaterial[];
+ evaluation?: EvaluationQuestion;
+checkpointEvaluation?: CheckpointEvaluation;
+finalEvaluation?: FinalEvaluation;
+};
 };

@@ -2,12 +2,22 @@ import { DigitalTool } from "@/types/learning";
 
 export const digitalTools: DigitalTool[] = [
   {
+    id: "onedrive",
+    name: "OneDrive",
+    description: "Archivos en la nube y trabajo colaborativo.",
+    icon: "/tools/onedrive.png",
+    descubreProgress: 0,
+    potenciaProgress: 0,
+    status: "active",
+  },
+  {
     id: "outlook",
     name: "Outlook",
     description: "Correo, calendario y organización diaria.",
     icon: "/tools/outlook.png",
     descubreProgress: 0,
     potenciaProgress: 0,
+    status: "coming-soon",
   },
   {
     id: "teams",
@@ -16,14 +26,7 @@ export const digitalTools: DigitalTool[] = [
     icon: "/tools/teams.png",
     descubreProgress: 0,
     potenciaProgress: 0,
-  },
-  {
-    id: "onedrive",
-    name: "OneDrive",
-    description: "Archivos en la nube y trabajo colaborativo.",
-    icon: "/tools/onedrive.png",
-    descubreProgress: 0,
-    potenciaProgress: 0,
+    status: "coming-soon",
   },
   {
     id: "excel",
@@ -32,6 +35,7 @@ export const digitalTools: DigitalTool[] = [
     icon: "/tools/excel.png",
     descubreProgress: 0,
     potenciaProgress: 0,
+    status: "coming-soon",
   },
   {
     id: "word",
@@ -40,29 +44,6 @@ export const digitalTools: DigitalTool[] = [
     icon: "/tools/word.png",
     descubreProgress: 0,
     potenciaProgress: 0,
-  },
-  {
-    id: "sharepoint",
-    name: "SharePoint",
-    description: "Sitios, archivos y espacios de trabajo.",
-    icon: "/tools/sharepoint.png",
-    descubreProgress: 0,
-    potenciaProgress: 0,
-  },
-  {
-    id: "powerpoint",
-    name: "PowerPoint",
-    description: "Presentaciones claras y profesionales.",
-    icon: "/tools/powerpoint.png",
-    descubreProgress: 0,
-    potenciaProgress: 0,
-  },
-  {
-    id: "acrobat",
-    name: "Acrobat",
-    description: "Consulta, edición y manejo de archivos PDF.",
-    icon: "/tools/acrobat.png",
-    descubreProgress: 0,
-    potenciaProgress: 0,
+    status: "coming-soon",
   },
 ];

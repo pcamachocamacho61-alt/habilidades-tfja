@@ -19,6 +19,8 @@ export function DigitalToolCard({ tool }: DigitalToolCardProps) {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [badgeValue, setBadgeValue] = useState<string | null>(null);
 
+  const isComingSoon = tool.status === "coming-soon";
+
   useEffect(() => {
     if (tool.id !== "onedrive") {
       return;
@@ -52,16 +54,20 @@ export function DigitalToolCard({ tool }: DigitalToolCardProps) {
 
   const badgeInfo = getOneDriveBadgeInfo(badgeValue);
 
-  const href =
-    tool.id === "onedrive"
-      ? "/herramientas-digitales/onedrive"
-      : "/herramientas-digitales";
-
-  return (
-    <Link
-      href={href}
-      className="group rounded-3xl border border-white/80 bg-white/85 p-5 text-center shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur transition hover:-translate-y-1 hover:shadow-[0_18px_60px_rgba(15,23,42,0.14)]"
+  const cardContent = (
+    <div
+      className={
+        isComingSoon
+          ? "relative h-full rounded-3xl border border-white/80 bg-white/75 p-5 text-center opacity-80 shadow-[0_12px_40px_rgba(15,23,42,0.06)] backdrop-blur"
+          : "relative h-full rounded-3xl border border-white/80 bg-white/85 p-5 text-center shadow-[0_12px_40px_rgba(15,23,42,0.08)] backdrop-blur transition group-hover:-translate-y-1 group-hover:shadow-[0_18px_60px_rgba(15,23,42,0.14)]"
+      }
     >
+      {isComingSoon && (
+        <div className="absolute right-4 top-4 rounded-full bg-[#f5f8fd] px-3 py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">
+          Próximamente
+        </div>
+      )}
+
       <h2 className="text-sm font-extrabold uppercase tracking-wide text-[#0b376d]">
         {tool.name}
       </h2>
@@ -103,6 +109,22 @@ export function DigitalToolCard({ tool }: DigitalToolCardProps) {
           Insignia: {badgeInfo.title}
         </div>
       )}
+
+      {isComingSoon && (
+        <p className="mt-4 text-xs font-semibold text-slate-500">
+          Esta ruta será habilitada en una siguiente etapa.
+        </p>
+      )}
+    </div>
+  );
+
+  if (isComingSoon) {
+    return <div>{cardContent}</div>;
+  }
+
+  return (
+    <Link href={`/herramientas-digitales/${tool.id}`} className="group block">
+      {cardContent}
     </Link>
   );
 }

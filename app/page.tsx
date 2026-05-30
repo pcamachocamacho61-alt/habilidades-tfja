@@ -27,43 +27,51 @@ export default function HomePage() {
           </div>
 
           <div className="-mt-10">
-  <h1 className="text-4xl font-bold tracking-tight text-[#061b3a] md:text-5xl">
+      <h1 className="text-4xl font-bold tracking-tight text-[#061b3a] md:text-5xl">
     ¿Qué quieres potenciar hoy?
-  </h1>
+      </h1>
 
-  <p className="mt-4 text-lg text-slate-600">
+   <p className="mt-4 text-lg text-slate-600">
     Rutas rápidas para simplificar tu trabajo diario en el Tribunal.
-  </p>
+    </p>
 
-  <div className="mx-auto mt-7 grid max-w-4xl gap-8 md:grid-cols-2">
+    <div className="mx-auto mt-7 grid max-w-4xl gap-8 md:grid-cols-2">
    <HomeRouteCard
-  title="Herramientas digitales"
-  description="Teams, Outlook, OneDrive y productividad diaria."
-  href="/herramientas-digitales"
-  label="Microcontenidos de menos de 5 minutos"
-  variant="blue"
-  iconSrc="/home-icons/herramientas-digitales.png"
-/>
+    title="Herramientas digitales"
+    description="Teams, Outlook, OneDrive y productividad diaria."
+    href="/herramientas-digitales"
+    label="Domina herramientas que simplifican tu día."
+    variant="blue"
+    iconSrc="/home-icons/herramientas-digitales.png"
+    />
 
-<HomeRouteCard
-  title="Sistemas y aplicaciones jurisdiccionales"
-  description="SICSEJ, Juicio en Línea y flujos operativos."
-  href="/sistemas-jurisdiccionales"
-  label="Simuladores prácticos y casos reales"
-  variant="bronze"
-  iconSrc="/home-icons/herramientas-jurisdiccionales.png"
-/>
-  </div>
+    <HomeRouteCard
+    title="Sistemas y aplicaciones jurisdiccionales"
+    description="SICSEJ, Juicio en Línea y flujos operativos."
+    href="/sistemas-jurisdiccionales"
+    label="Consulta, práctica y aprendizaje para cada función."
+    variant="bronze"
+    iconSrc="/home-icons/herramientas-jurisdiccionales.png"
+    />
+    </div>
 
-  <div className="mt-8 flex items-center justify-center gap-3 pb-6 text-sm font-bold uppercase tracking-[0.35em] text-[#061b3a]">
+    <div className="mt-8 flex items-center justify-center gap-3 pb-6 text-sm font-bold uppercase tracking-[0.35em] text-[#061b3a]">
     <span className="text-[#c78b3a]">⚖</span>
     <span>
       Menos clics, <span className="text-[#c78b3a]">más justicia.</span>
     </span>
-  </div>
- </div>
-  </div>
+    </div>
+    <p className="mt-1 text-center text-xs font-semibold leading-6 text-slate-500">
+  Colección de recursos SOTIC para el personal del TFJA. Consulta y aprendizaje
+  institucional | Derechos reservados.
+</p>
+    </div>
+          
+    </div>
+    
       </section>
+
     </main>
+    
   );
 }

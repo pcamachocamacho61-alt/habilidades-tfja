@@ -17,11 +17,11 @@ export default function DigitalToolsPage() {
           Haz clic en un curso para comenzar o continuar tu aprendizaje.
         </p>
 
-        <div className="mt-8 grid gap-5 sm:grid-cols-2 xl:grid-cols-4">
-          {digitalTools.map((tool) => (
-            <DigitalToolCard key={tool.id} tool={tool} />
-          ))}
-        </div>
+      <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+  {digitalTools.map((tool) => (
+    <DigitalToolCard key={tool.id} tool={tool} />
+  ))}
+</div>
       </div>
     </div>
   );

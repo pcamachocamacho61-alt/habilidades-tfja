@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LearningStep } from "@/types/learning";
 import { ProgressBar } from "@/components/progress-bar";
-
+import { isStepLocked } from "@/lib/course-locks";
 type CourseStepSidebarProps = {
   steps: LearningStep[];
   currentStepId?: string;
@@ -92,34 +92,49 @@ export function CourseStepSidebar({
                 {blockSteps.map((step) => {
                   const active = step.id === currentStepId;
                   const completed = completedIds.includes(step.id);
+                  const locked = isStepLocked(step, steps, completedIds);
+           return locked ? (
+  <div
+    key={step.id}
+    className="block cursor-not-allowed rounded-2xl border border-slate-100 bg-slate-100 p-3 opacity-60"
+  >
+    <div className="flex gap-3">
+      <span className="mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-slate-300 text-[10px] font-bold text-slate-500">
+        🔒
+      </span>
 
-                  return (
-                    <Link
-                      key={step.id}
-                      href={`/herramientas-digitales/onedrive/descubre/${step.id}`}
-                      className={
-                        active
-                          ? "block rounded-2xl border border-blue-200 bg-blue-50 p-3"
-                          : "block rounded-2xl border border-slate-100 bg-slate-50 p-3 hover:bg-white"
-                      }
-                    >
-                      <div className="flex gap-3">
-                        <span className={getIndicatorClass(step, completed)}>
-                          {getStepIndicator(step, completed)}
-                        </span>
+      <div>
+        <p className="text-sm font-bold text-slate-500">{step.title}</p>
 
-                        <div>
-                          <p className="text-sm font-bold text-[#061b3a]">
-                            {step.title}
-                          </p>
+        <p className="mt-1 text-xs text-slate-400">Bloqueado</p>
+      </div>
+    </div>
+  </div>
+) : (
+  <Link
+    key={step.id}
+    href={`/herramientas-digitales/onedrive/descubre/${step.id}`}
+    className={
+      active
+        ? "block rounded-2xl border border-blue-200 bg-blue-50 p-3"
+        : "block rounded-2xl border border-slate-100 bg-slate-50 p-3 hover:bg-white"
+    }
+  >
+    <div className="flex gap-3">
+      <span className={getIndicatorClass(step, completed)}>
+        {getStepIndicator(step, completed)}
+      </span>
 
-                          <p className="mt-1 text-xs text-slate-500">
-                            {getStepLabel(step)}
-                          </p>
-                        </div>
-                      </div>
-                    </Link>
-                  );
+      <div>
+        <p className="text-sm font-bold text-[#061b3a]">{step.title}</p>
+
+        <p className="mt-1 text-xs text-slate-500">
+          {getStepLabel(step)}
+        </p>
+      </div>
+    </div>
+  </Link>
+);
                 })}
               </div>
             </div>

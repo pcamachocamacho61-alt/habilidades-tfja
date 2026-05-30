@@ -8,7 +8,9 @@ import { CourseStepSidebar } from "@/components/course-step-sidebar";
 import { ProgressBar } from "@/components/progress-bar";
 import { FinalEvaluationPanel } from "@/components/final-evaluation-panel";
 import { getProgressByCompletedIds } from "@/lib/progress";
-
+import { CheckpointEvaluationPanel } from "@/components/checkpoint-evaluation-panel";
+import { CourseLockedPanel } from "@/components/course-locked-panel";
+import { isStepLocked } from "@/lib/course-locks";
 type CourseExperienceProps = {
   steps: LearningStep[];
   currentStep: LearningStep;
@@ -58,7 +60,15 @@ export function CourseExperience({
   }, [steps.length, completedIds]);
 
   const currentStepCompleted = completedIds.includes(currentStep.id);
+const currentStepLocked = isStepLocked(currentStep, steps, completedIds);
 
+const blockOneSteps = steps.filter((step) => step.block === 1);
+
+const blockOneProgress = Math.round(
+  (blockOneSteps.filter((step) => completedIds.includes(step.id)).length /
+    blockOneSteps.length) *
+    100
+);
   const stepsBeforeFinalEvaluation = steps.filter(
     (step) => step.id !== "evaluacion-final"
   );
@@ -123,7 +133,9 @@ export function CourseExperience({
         completedIds={completedIds}
         progress={progress}
       />
-
+{currentStepLocked ? (
+      <CourseLockedPanel routeProgressBeforeUnlock={blockOneProgress} />
+    ) : (
       <article className="min-w-0 rounded-[32px] border border-white bg-white/90 p-8 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
         <div className="flex flex-col gap-5 border-b border-slate-200 pb-6 md:flex-row md:items-start md:justify-between">
           <div>
@@ -147,7 +159,7 @@ export function CourseExperience({
     : currentStep.type === "evaluation"
       ? "Checkpoint de avance"
       : `Paso ${currentStep.number} · ${currentStep.estimatedTime}`}
-</p>
+   </p>
           </div>
 
           <div className="min-w-[220px] rounded-2xl bg-[#f5f8fd] p-4">
@@ -160,21 +172,35 @@ export function CourseExperience({
           </div>
         </div>
 
-        <p className="mt-7 text-lg leading-8 text-slate-600">
-          {currentStep.content.description}
-        </p>
+      {currentStep.content.image && currentStep.content.imageFirst && (
+  <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+    <Image
+      src={currentStep.content.image}
+      alt={currentStep.content.title}
+      width={1100}
+      height={620}
+      className="h-auto w-full object-cover"
+    />
+  </div>
+)}
 
-        {currentStep.content.image && (
-          <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white">
-            <Image
-              src={currentStep.content.image}
-              alt={currentStep.content.title}
-              width={1100}
-              height={620}
-              className="h-auto w-full object-cover"
-            />
-          </div>
-        )}
+{!currentStep.content.hideDescription && (
+  <p className="mt-7 text-lg leading-8 text-slate-600">
+    {currentStep.content.description}
+  </p>
+)}
+
+{currentStep.content.image && !currentStep.content.imageFirst && (
+  <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white">
+    <Image
+      src={currentStep.content.image}
+      alt={currentStep.content.title}
+      width={1100}
+      height={620}
+      className="h-auto w-full object-cover"
+    />
+  </div>
+)}
 
         {currentStep.content.gif && (
           <div className="mt-8 overflow-hidden rounded-3xl border border-slate-200 bg-white">
@@ -199,12 +225,13 @@ export function CourseExperience({
         )}
 
         <div className="mt-8 rounded-3xl bg-[#f5f8fd] p-6">
-          <h2 className="text-lg font-bold text-[#061b3a]">
-  {currentStep.type === "welcome"
-    ? "En esta ruta aprenderás:"
-    : currentStep.type === "evaluation"
-      ? "Antes de continuar, confirma:"
-      : "En este paso lograrás:"}
+<h2 className="text-lg font-bold text-[#061b3a]">
+  {currentStep.content.bulletsTitle ??
+    (currentStep.type === "welcome"
+      ? "En esta ruta aprenderás:"
+      : currentStep.type === "evaluation"
+        ? "Antes de continuar, confirma:"
+        : "En este paso lograrás:")}
 </h2>
 
           <ul className="mt-4 space-y-3">
@@ -217,113 +244,146 @@ export function CourseExperience({
           </ul>
         </div>
 
-        {currentStep.content.supportMaterials &&
-          currentStep.content.supportMaterials.length > 0 && (
-            <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
-              <h2 className="text-lg font-bold text-[#061b3a]">
-                Material de apoyo
-              </h2>
+     {currentStep.content.supportMaterials &&
+  currentStep.content.supportMaterials.length > 0 && (
+    <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6">
+      <h2 className="text-lg font-bold text-[#061b3a]">
+        Material de apoyo
+      </h2>
 
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                {currentStep.content.supportMaterials.map((material) => (
-                  <a
-                    key={material.url}
-                    href={material.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="rounded-2xl border border-slate-200 bg-[#f5f8fd] p-4 text-sm font-bold text-[#0b376d] hover:bg-blue-50"
-                  >
-                    {material.type === "pdf" ? "PDF · " : ""}
-                    {material.title}
-                  </a>
-                ))}
+      <p className="mt-2 text-sm leading-6 text-slate-500">
+        Consulta el material sin salir de la plataforma o descárgalo si necesitas conservarlo.
+      </p>
+
+      <div className="mt-5 space-y-5">
+        {currentStep.content.supportMaterials.map((material) => (
+          <div
+            key={material.url}
+            className="rounded-3xl border border-slate-200 bg-[#f5f8fd] p-4"
+          >
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-[#061b3a]">
+                  {material.type === "pdf" ? "PDF · " : ""}
+                  {material.title}
+                </p>
+
+                <p className="mt-1 text-xs text-slate-500">
+                  Vista rápida dentro del curso.
+                </p>
               </div>
+
+              <a
+                href={material.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-2xl bg-[#0b376d] px-5 py-3 text-center text-sm font-bold text-white hover:bg-[#061b3a]"
+              >
+                Descargar / abrir
+              </a>
+            </div>
+
+            {material.type === "pdf" && (
+              <iframe
+                src={material.url}
+                title={material.title}
+                className="mt-4 h-[420px] w-full rounded-2xl border border-slate-200 bg-white"
+              />
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+
+        {currentStep.type === "evaluation" ? (
+  currentStep.content.finalEvaluation ? (
+    <FinalEvaluationPanel
+      finalEvaluation={currentStep.content.finalEvaluation}
+      currentStepCompleted={currentStepCompleted}
+      canStartFinalEvaluation={canStartFinalEvaluation}
+      routeProgressBeforeFinal={routeProgressBeforeFinal}
+      onApproved={handleCompleteCurrentStep}
+    />
+  ) : currentStep.content.checkpointEvaluation ? (
+    <CheckpointEvaluationPanel
+      checkpointEvaluation={currentStep.content.checkpointEvaluation}
+      currentStepCompleted={currentStepCompleted}
+      onApproved={handleCompleteCurrentStep}
+    />
+  ) : (
+    <div className="mt-8 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-6">
+      <h3 className="text-xl font-bold text-[#061b3a]">
+        Evaluación rápida
+      </h3>
+
+      {currentStep.content.evaluation ? (
+        <>
+          <p className="mt-4 text-base font-semibold leading-7 text-slate-700">
+            {currentStep.content.evaluation.question}
+          </p>
+
+          <div className="mt-5 space-y-3">
+            {currentStep.content.evaluation.options.map((option) => {
+              const selected = selectedAnswer === option;
+
+              return (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => {
+                    setSelectedAnswer(option);
+                    setAnswerStatus("idle");
+                  }}
+                  className={
+                    selected
+                      ? "w-full rounded-2xl border border-[#0b376d] bg-blue-50 p-4 text-left text-sm font-bold text-[#061b3a]"
+                      : "w-full rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm font-semibold text-slate-600 hover:bg-blue-50"
+                  }
+                >
+                  {option}
+                </button>
+              );
+            })}
+          </div>
+
+          {answerStatus === "correct" && (
+            <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
+              Respuesta correcta. Checkpoint completado.
             </div>
           )}
 
-        {currentStep.type === "evaluation" ? (
-          currentStep.content.finalEvaluation ? (
-            <FinalEvaluationPanel
-              finalEvaluation={currentStep.content.finalEvaluation}
-              currentStepCompleted={currentStepCompleted}
-              canStartFinalEvaluation={canStartFinalEvaluation}
-              routeProgressBeforeFinal={routeProgressBeforeFinal}
-              onApproved={handleCompleteCurrentStep}
-            />
-          ) : (
-            <div className="mt-8 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-6">
-              <h3 className="text-xl font-bold text-[#061b3a]">
-                Evaluación rápida
-              </h3>
-
-              {currentStep.content.evaluation ? (
-                <>
-                  <p className="mt-4 text-base font-semibold leading-7 text-slate-700">
-                    {currentStep.content.evaluation.question}
-                  </p>
-
-                  <div className="mt-5 space-y-3">
-                    {currentStep.content.evaluation.options.map((option) => {
-                      const selected = selectedAnswer === option;
-
-                      return (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => {
-                            setSelectedAnswer(option);
-                            setAnswerStatus("idle");
-                          }}
-                          className={
-                            selected
-                              ? "w-full rounded-2xl border border-[#0b376d] bg-blue-50 p-4 text-left text-sm font-bold text-[#061b3a]"
-                              : "w-full rounded-2xl border border-slate-200 bg-white p-4 text-left text-sm font-semibold text-slate-600 hover:bg-blue-50"
-                          }
-                        >
-                          {option}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {answerStatus === "correct" && (
-                    <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-700">
-                      Respuesta correcta. Checkpoint completado.
-                    </div>
-                  )}
-
-                  {answerStatus === "incorrect" && (
-                    <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
-                      Respuesta incorrecta. Revisa el contenido e intenta
-                      nuevamente.
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={handleValidateAnswer}
-                    disabled={!selectedAnswer || currentStepCompleted}
-                    className={
-                      currentStepCompleted
-                        ? "mt-5 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white"
-                        : !selectedAnswer
-                          ? "mt-5 cursor-not-allowed rounded-2xl bg-slate-300 px-6 py-3 text-sm font-bold text-white"
-                          : "mt-5 rounded-2xl bg-[#c78b3a] px-6 py-3 text-sm font-bold text-white hover:bg-[#a66f24]"
-                    }
-                  >
-                    {currentStepCompleted
-                      ? "Checkpoint completado"
-                      : "Validar respuesta"}
-                  </button>
-                </>
-              ) : (
-                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
-                  Esta evaluación aún no tiene pregunta configurada.
-                </div>
-              )}
+          {answerStatus === "incorrect" && (
+            <div className="mt-5 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-bold text-red-700">
+              Respuesta incorrecta. Revisa el contenido e intenta nuevamente.
             </div>
-          )
-        ) : (
+          )}
+
+          <button
+            type="button"
+            onClick={handleValidateAnswer}
+            disabled={!selectedAnswer || currentStepCompleted}
+            className={
+              currentStepCompleted
+                ? "mt-5 rounded-2xl bg-emerald-600 px-6 py-3 text-sm font-bold text-white"
+                : !selectedAnswer
+                  ? "mt-5 cursor-not-allowed rounded-2xl bg-slate-300 px-6 py-3 text-sm font-bold text-white"
+                  : "mt-5 rounded-2xl bg-[#c78b3a] px-6 py-3 text-sm font-bold text-white hover:bg-[#a66f24]"
+            }
+          >
+            {currentStepCompleted
+              ? "Checkpoint completado"
+              : "Validar respuesta"}
+          </button>
+        </>
+      ) : (
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-700">
+          Esta evaluación aún no tiene pregunta configurada.
+        </div>
+      )}
+    </div>
+  )
+) : (
           <button
             type="button"
             onClick={handleCompleteCurrentStep}
@@ -390,6 +450,7 @@ export function CourseExperience({
           </div>
         </div>
       </article>
+    )}
     </div>
   );
 }
