@@ -46,7 +46,7 @@ export default function HomePage() {
 
     <HomeRouteCard
     title="Sistemas y aplicaciones jurisdiccionales"
-    description="SICSEJ, Juicio 2.0 en Línea y flujos operativos."
+    description="SICSEJ, Juicio Línea 2.0 y flujos operativos."
     href="/sistemas-jurisdiccionales"
     label="Consulta, práctica y aprendizaje para cada función."
     variant="bronze"
