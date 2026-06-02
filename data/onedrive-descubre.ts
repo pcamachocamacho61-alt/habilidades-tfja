@@ -20,7 +20,7 @@ export const onedriveDescubreSteps: LearningStep[] = [
         "Identificarás OneDrive como tu espacio institucional de trabajo en la nube.",
         "Aprenderás a reducir duplicados y versiones confusas de documentos.",
         "Reconocerás la importancia de administrar permisos antes de compartir información.",
-        "Avanzarás mediante microcontenidos, pasos prácticos y checkpoints.",
+        "Avanzarás mediante microcontenidos, pasos prácticos y evaluaciones.",
       ],
       video: "/course-assets/onedrive/videos/bienvenida-onedrive.mp4",
     },
@@ -84,28 +84,6 @@ export const onedriveDescubreSteps: LearningStep[] = [
   {
     id: "paso-3",
     number: 3,
-    title: "Organiza con carpetas",
-    shortDescription:
-      "Reconoce cómo estructurar archivos y carpetas para facilitar la consulta y evitar duplicados.",
-    block: 1,
-    type: "content",
-    estimatedTime: "4 min",
-    content: {
-      eyebrow: "Organización inicial",
-      title: "Ordena tus archivos para encontrarlos más rápido",
-      description:
-        "Una estructura clara de carpetas permite localizar documentos con mayor facilidad, evitar versiones duplicadas y mantener la información institucional mejor organizada.",
-      bullets: [
-        "Crea carpetas con nombres claros y relacionados con el asunto, área o actividad.",
-        "Evita guardar múltiples versiones del mismo documento sin una nomenclatura clara.",
-        "Agrupa archivos relacionados para facilitar su consulta posterior.",
-        "Usa OneDrive como espacio de trabajo ordenado, no solo como depósito de archivos.",
-      ],
-    },
-  },
-  {
-    id: "paso-4",
-    number: 4,
     title: "Comparte un archivo",
     shortDescription:
       "Aprende a compartir un archivo mediante vínculo o destinatarios específicos.",
@@ -127,102 +105,102 @@ export const onedriveDescubreSteps: LearningStep[] = [
       video: "/course-assets/onedrive/videos/paso-4-compartir-archivo.mp4",
     },
   },
-{
-  id: "paso-5",
-  number: 5,
-  title: "Compartir y permisos",
-  shortDescription:
-    "Comprende la diferencia entre adjuntar archivos y compartir vínculos con permisos controlados.",
-  block: 1,
-  type: "content",
-  estimatedTime: "4 min",
-  content: {
-    eyebrow: "Control de acceso",
-    title: "Adjuntar archivos vs compartir vínculos",
-    description:
-      "Compartir un vínculo desde OneDrive no es lo mismo que adjuntar un archivo. El vínculo permite dar acceso al documento centralizado en la nube, mientras que el adjunto genera una copia independiente.",
-    bulletsTitle: "En este paso comprenderás:",
-    bullets: [
-      "Comprender la diferencia entre adjuntar un archivo (enviar una copia) y compartir un vínculo (dar acceso al archivo en OneDrive).",
-      "Identificar que compartir por vínculo permite trabajar sobre un documento centralizado en la nube, con colaboración en tiempo real y una sola versión vigente.",
-      "Reconocer que los vínculos permiten gestionar permisos (ver o editar) y retirar accesos, brindando mayor control que el envío de archivos adjuntos.",
-    ],
-    video: "/course-assets/onedrive/videos/adjuntar-vs-compartir-vinculo.mp4",
-    supportMaterials: [
-      {
-        title: "Adjuntar vs compartir vínculo",
-        type: "pdf",
-        url: "/course-assets/onedrive/docs/adjuntar-vs-compartir-vinculo.pdf",
-      },
-    ],
-  },
-},
   {
-    id: "checkpoint-1",
-    number: 6,
-    title: "Checkpoint 1",
+    id: "paso-4",
+    number: 4,
+    title: "Compartir y permisos",
+    shortDescription:
+      "Comprende la diferencia entre adjuntar archivos y compartir vínculos con permisos controlados.",
+    block: 1,
+    type: "content",
+    estimatedTime: "4 min",
+    content: {
+      eyebrow: "Control de acceso",
+      title: "Adjuntar archivos vs compartir vínculos",
+      description:
+        "Compartir un vínculo desde OneDrive no es lo mismo que adjuntar un archivo. El vínculo permite dar acceso al documento centralizado en la nube, mientras que el adjunto genera una copia independiente.",
+      bulletsTitle: "En este paso comprenderás:",
+      bullets: [
+        "Comprender la diferencia entre adjuntar un archivo, es decir, enviar una copia, y compartir un vínculo, es decir, dar acceso al archivo en OneDrive.",
+        "Identificar que compartir por vínculo permite trabajar sobre un documento centralizado en la nube, con colaboración en tiempo real y una sola versión vigente.",
+        "Reconocer que los vínculos permiten gestionar permisos de ver o editar y retirar accesos, brindando mayor control que el envío de archivos adjuntos.",
+      ],
+      video: "/course-assets/onedrive/videos/adjuntar-vs-compartir-vinculo.mp4",
+      supportMaterials: [
+        {
+          title: "Adjuntar vs compartir vínculo",
+          type: "pdf",
+          url: "/course-assets/onedrive/docs/adjuntar-vs-compartir-vinculo.pdf",
+        },
+      ],
+    },
+  },
+  {
+    id: "evaluacion-1",
+    number: 5,
+    title: "Evaluación 1",
     shortDescription:
       "Valida los conceptos principales sobre Microsoft 365, OneDrive y vínculos de acceso.",
     block: 1,
     type: "evaluation",
-    estimatedTime: "Checkpoint",
+    estimatedTime: "Evaluación",
     content: {
-      eyebrow: "Checkpoint 1",
-      title: "Valida tu comprensión inicial",
+      eyebrow: "Evaluación Módulo 1",
+      title: "Evaluación 1",
       description:
-        "Antes de continuar al siguiente bloque, confirma que comprendiste los conceptos base de Microsoft 365, OneDrive y la diferencia entre adjuntar archivos y compartir vínculos.",
+        "Antes de continuar al siguiente módulo, confirma que comprendiste los conceptos base de Microsoft 365, OneDrive y la diferencia entre adjuntar archivos y compartir vínculos.",
       bullets: [
         "Tu cuenta institucional es la llave de acceso al ecosistema Microsoft 365.",
         "OneDrive centraliza información institucional en la nube de forma segura.",
         "Compartir vínculos permite controlar permisos y mantener una sola versión actualizada.",
       ],
-   checkpointEvaluation: {
-  minimumCorrectAnswers: 2,
-  questions: [
-    {
-      question:
-        "¿Cuál es la función de tu correo institucional (@tfja.gob.mx) dentro del ecosistema Microsoft 365?",
-      options: [
-        "Es únicamente para enviar y recibir correos electrónicos.",
-        "Es tu llave de acceso a los servicios de Microsoft 365 y está vinculada con la contraseña de tu equipo institucional.",
-        "Sirve solo para registrar asistencia a sistemas internos.",
-        "Es una cuenta independiente que no se relaciona con otras herramientas.",
-      ],
-      correctAnswer:
-        "Es tu llave de acceso a los servicios de Microsoft 365 y está vinculada con la contraseña de tu equipo institucional.",
-    },
-    {
-      question:
-        "¿Por qué el TFJA utiliza OneDrive como plataforma institucional?",
-      options: [
-        "Para almacenar archivos personales sin restricciones.",
-        "Para reemplazar completamente el uso del correo electrónico.",
-        "Porque permite guardar información en la nube de forma segura, centralizada y accesible desde dispositivos autorizados.",
-        "Porque es obligatorio guardar todos los archivos únicamente en una computadora local.",
-      ],
-      correctAnswer:
-        "Porque permite guardar información en la nube de forma segura, centralizada y accesible desde dispositivos autorizados.",
-    },
-    {
-      question:
-        "¿Qué sucede cuando compartes un vínculo en lugar de adjuntar un archivo?",
-      options: [
-        "Se envía una copia independiente del documento.",
-        "Se otorga acceso a un archivo en la nube con una sola versión actualizada y permisos controlados.",
-        "El archivo deja de pertenecer al usuario que lo creó.",
-        "El archivo se descarga automáticamente en todos los dispositivos.",
-      ],
-      correctAnswer:
-        "Se otorga acceso a un archivo en la nube con una sola versión actualizada y permisos controlados.",
-    },
-  ],
-},
+      checkpointEvaluation: {
+        minimumCorrectAnswers: 2,
+        questions: [
+          {
+            question:
+              "¿Cuál es la función de tu correo institucional (@tfja.gob.mx) dentro del ecosistema Microsoft 365?",
+            options: [
+              "Es únicamente para enviar y recibir correos electrónicos.",
+              "Es tu llave de acceso a los servicios de Microsoft 365 y está vinculada con la contraseña de tu equipo institucional.",
+              "Sirve solo para registrar asistencia a sistemas internos.",
+              "Es una cuenta independiente que no se relaciona con otras herramientas.",
+            ],
+            correctAnswer:
+              "Es tu llave de acceso a los servicios de Microsoft 365 y está vinculada con la contraseña de tu equipo institucional.",
+          },
+          {
+            question:
+              "¿Por qué el TFJA utiliza OneDrive como plataforma institucional?",
+            options: [
+              "Para almacenar archivos personales sin restricciones.",
+              "Para reemplazar completamente el uso del correo electrónico.",
+              "Porque permite guardar información en la nube de forma segura, centralizada y accesible desde dispositivos autorizados.",
+              "Porque es obligatorio guardar todos los archivos únicamente en una computadora local.",
+            ],
+            correctAnswer:
+              "Porque permite guardar información en la nube de forma segura, centralizada y accesible desde dispositivos autorizados.",
+          },
+          {
+            question:
+              "¿Qué sucede cuando compartes un vínculo en lugar de adjuntar un archivo?",
+            options: [
+              "Se envía una copia independiente del documento.",
+              "Se otorga acceso a un archivo en la nube con una sola versión actualizada y permisos controlados.",
+              "El archivo deja de pertenecer al usuario que lo creó.",
+              "El archivo se descarga automáticamente en todos los dispositivos.",
+            ],
+            correctAnswer:
+              "Se otorga acceso a un archivo en la nube con una sola versión actualizada y permisos controlados.",
+          },
+        ],
+      },
     },
   },
 
   {
-    id: "paso-6",
-    number: 7,
+    id: "paso-5",
+    number: 6,
     title: "Distingue archivo y carpeta",
     shortDescription:
       "Comprende la diferencia entre archivos y carpetas dentro de OneDrive.",
@@ -230,7 +208,7 @@ export const onedriveDescubreSteps: LearningStep[] = [
     type: "content",
     estimatedTime: "3 min",
     content: {
-      eyebrow: "Bloque 2",
+      eyebrow: "Módulo 2",
       title: "Distingue archivos y carpetas",
       description:
         "En OneDrive, las carpetas sirven para organizar documentos y los archivos representan elementos específicos de trabajo, como documentos, hojas de cálculo, presentaciones o imágenes.",
@@ -242,8 +220,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-7",
-    number: 8,
+    id: "paso-6",
+    number: 7,
     title: "Identifica archivos recientes",
     shortDescription:
       "Ubica documentos recientes para continuar tu trabajo con mayor rapidez.",
@@ -263,8 +241,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-8",
-    number: 9,
+    id: "paso-7",
+    number: 8,
     title: "Consulta archivos compartidos contigo",
     shortDescription:
       "Aprende a identificar archivos que otras personas han compartido contigo.",
@@ -284,8 +262,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-9",
-    number: 10,
+    id: "paso-8",
+    number: 9,
     title: "Evita duplicados",
     shortDescription:
       "Reconoce prácticas para reducir archivos duplicados y versiones confusas.",
@@ -305,8 +283,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-10",
-    number: 11,
+    id: "paso-9",
+    number: 10,
     title: "Recupera versiones anteriores",
     shortDescription:
       "Conoce la utilidad de consultar versiones previas de un documento.",
@@ -326,19 +304,19 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "checkpoint-2",
-    number: 12,
-    title: "Checkpoint 2",
+    id: "evaluacion-2",
+    number: 11,
+    title: "Evaluación 2",
     shortDescription:
       "Valida tus conocimientos sobre organización y consulta de archivos.",
     block: 2,
     type: "evaluation",
-    estimatedTime: "Checkpoint",
+    estimatedTime: "Evaluación",
     content: {
-      eyebrow: "Checkpoint 2",
-      title: "Confirma tu avance de organización",
+      eyebrow: "Evaluación Módulo 2",
+      title: "Evaluación 2",
       description:
-        "Antes de avanzar al último bloque, valida que comprendes cómo organizar, consultar y distinguir documentos dentro de OneDrive.",
+        "Antes de avanzar al último módulo, valida que comprendes cómo organizar, consultar y distinguir documentos dentro de OneDrive.",
       bullets: [
         "Distinguir archivos y carpetas.",
         "Consultar documentos recientes.",
@@ -360,8 +338,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
   },
 
   {
-    id: "paso-11",
-    number: 13,
+    id: "paso-10",
+    number: 12,
     title: "Trabaja desde distintos dispositivos",
     shortDescription:
       "Reconoce la disponibilidad de archivos institucionales desde dispositivos autorizados.",
@@ -369,7 +347,7 @@ export const onedriveDescubreSteps: LearningStep[] = [
     type: "content",
     estimatedTime: "3 min",
     content: {
-      eyebrow: "Bloque 3",
+      eyebrow: "Módulo 3",
       title: "Accede desde dispositivos autorizados",
       description:
         "OneDrive permite consultar archivos institucionales desde distintos dispositivos autorizados, manteniendo control y disponibilidad de la información.",
@@ -381,8 +359,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-12",
-    number: 14,
+    id: "paso-11",
+    number: 13,
     title: "Colabora en tiempo real",
     shortDescription:
       "Comprende cómo varias personas pueden trabajar sobre un mismo documento.",
@@ -402,8 +380,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-13",
-    number: 15,
+    id: "paso-12",
+    number: 14,
     title: "Cuida la información institucional",
     shortDescription:
       "Refuerza buenas prácticas para proteger documentos institucionales.",
@@ -424,8 +402,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-14",
-    number: 16,
+    id: "paso-13",
+    number: 15,
     title: "Aplica buenas prácticas",
     shortDescription:
       "Integra recomendaciones para el uso cotidiano de OneDrive.",
@@ -446,8 +424,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     },
   },
   {
-    id: "paso-15",
-    number: 17,
+    id: "paso-14",
+    number: 16,
     title: "Prepara tu evaluación final",
     shortDescription:
       "Repasa los conceptos principales antes de presentar la evaluación final.",
@@ -469,7 +447,7 @@ export const onedriveDescubreSteps: LearningStep[] = [
   },
   {
     id: "evaluacion-final",
-    number: 18,
+    number: 17,
     title: "Evaluación final",
     shortDescription:
       "Responde una evaluación final para completar la ruta OneDrive Descubre.",
@@ -477,8 +455,8 @@ export const onedriveDescubreSteps: LearningStep[] = [
     type: "evaluation",
     estimatedTime: "10 min",
     content: {
-      eyebrow: "Evaluación final",
-      title: "Demuestra tu dominio inicial de OneDrive",
+      eyebrow: "Evaluación Final",
+      title: "Evaluación final",
       description:
         "Esta evaluación integra los principales conceptos revisados durante la ruta OneDrive Descubre.",
       bullets: [
@@ -587,8 +565,7 @@ export const onedriveDescubreSteps: LearningStep[] = [
               "Los permisos de acceso y las personas destinatarias.",
           },
           {
-            question:
-              "¿Qué permite la colaboración en tiempo real?",
+            question: "¿Qué permite la colaboración en tiempo real?",
             options: [
               "Que varias personas autorizadas trabajen sobre un mismo archivo actualizado.",
               "Que cada persona tenga una copia aislada.",

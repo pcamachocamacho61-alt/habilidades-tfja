@@ -1,6 +1,5 @@
 import Image from "next/image";
 import { HomeRouteCard } from "@/components/home-route-card";
-import { redirect } from "next/navigation";
 export default function HomePage() {
   return (
     <main className="relative min-h-screen overflow-hidden bg-[#f5f8fd]">
@@ -47,7 +46,7 @@ export default function HomePage() {
 
     <HomeRouteCard
     title="Sistemas y aplicaciones jurisdiccionales"
-    description="SICSEJ, Juicio en Línea y flujos operativos."
+    description="SICSEJ, Juicio 2.0 en Línea y flujos operativos."
     href="/sistemas-jurisdiccionales"
     label="Consulta, práctica y aprendizaje para cada función."
     variant="bronze"
@@ -55,12 +54,19 @@ export default function HomePage() {
     />
     </div>
 
-    <div className="mt-8 flex items-center justify-center gap-3 pb-6 text-sm font-bold uppercase tracking-[0.35em] text-[#061b3a]">
-    <span className="text-[#c78b3a]">⚖</span>
-    <span>
-      Menos clics, <span className="text-[#c78b3a]">más justicia.</span>
-    </span>
-    </div>
+   <div className="mt-8 flex items-center justify-center gap-3 pb-6 text-sm font-bold uppercase tracking-[0.35em] text-[#061b3a]">
+  <Image
+    src="/brand/menos-clics-mas-justicia-sinfondo.png"
+    alt="Menos clics, más justicia"
+     width={40}
+  height={40}
+  className="h-10 w-10 object-contain"
+  />
+
+  <span>
+    Menos clics, <span className="text-[#c78b3a]">más justicia.</span>
+  </span>
+</div>
     <p className="mt-1 text-center text-xs font-semibold leading-6 text-slate-500">
   Colección de recursos SOTIC para el personal del TFJA. Consulta y aprendizaje
   institucional | Derechos reservados.

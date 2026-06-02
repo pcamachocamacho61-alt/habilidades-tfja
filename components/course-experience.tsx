@@ -124,7 +124,37 @@ const blockOneProgress = Math.round(
 
     setAnswerStatus("incorrect");
   }
+function getDisplayEyebrow() {
+  if (currentStep.id === "evaluacion-1" || currentStep.id === "evaluacion-1") {
+    return "Evaluación Módulo 1";
+  }
 
+  if (currentStep.id === "evaluacion-2" || currentStep.id === "evaluacion-2") {
+    return "Evaluación Módulo 2";
+  }
+
+  if (currentStep.id === "evaluacion-final") {
+    return "Evaluación Final";
+  }
+
+  return currentStep.content.eyebrow;
+}
+
+function getDisplayTitle() {
+  if (currentStep.id === "evaluacion-1" || currentStep.id === "evaluacion-1") {
+    return "Evaluación 1";
+  }
+
+  if (currentStep.id === "evaluacion-2" || currentStep.id === "evaluacion-2") {
+    return "Evaluación 2";
+  }
+
+  if (currentStep.id === "evaluacion-final") {
+    return "Evaluación final";
+  }
+
+  return currentStep.content.title;
+}
   return (
     <div className="grid w-full gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
       <CourseStepSidebar
@@ -146,11 +176,11 @@ const blockOneProgress = Math.round(
                   : "text-sm font-bold uppercase tracking-[0.25em] text-blue-700"
               }
             >
-              {currentStep.content.eyebrow}
+              {getDisplayEyebrow()}
             </p>
 
             <h1 className="mt-4 text-4xl font-bold tracking-tight text-[#061b3a]">
-              {currentStep.content.title}
+              {getDisplayTitle()}
             </h1>
 
            <p className="mt-3 text-sm font-semibold text-slate-500">
@@ -395,7 +425,7 @@ const blockOneProgress = Math.round(
           >
             {currentStepCompleted
               ? "Paso completado"
-              : "Marcar paso como completado"}
+              : "Completar paso"}
           </button>
         )}
 

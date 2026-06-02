@@ -70,7 +70,7 @@ export function CourseLockedPanel({
         </Link>
 
         <Link
-          href="/herramientas-digitales/onedrive/descubre/checkpoint-1"
+          href="/herramientas-digitales/onedrive/descubre/evaluacion-1"
           className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-center text-sm font-bold text-[#061b3a] hover:bg-slate-50"
         >
           Ir al Checkpoint 1

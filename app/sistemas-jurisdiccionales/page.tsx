@@ -33,44 +33,52 @@ const consultationVideos = [
 
 const jurisdictionalProfiles = [
   {
-    id: "5dc5fd55c6c7c06ce2a6b811",
-    name: "Magistrado Presidente",
-    description: "Rutas enfocadas en consulta, revisión y seguimiento de asuntos.",
+    id: "magistrados",
+    name: "Magistrados",
+    description:
+      "Rutas enfocadas en consulta, revisión de asuntos, seguimiento jurisdiccional y toma de decisiones dentro del expediente.",
   },
   {
-    id: "5dc600e1c6c7c06ce2a6b817",
-    name: "Unidad de Perito",
-    description: "Contenido relacionado con solicitudes, asignaciones y validaciones periciales.",
+    id: "secretarios-acuerdo",
+    name: "Secretarios de Acuerdo",
+    description:
+      "Capacitación orientada a la elaboración, validación, firma, integración y seguimiento de acuerdos, sentencias y actuaciones.",
   },
   {
-    id: "5de9314db10501598fd06a18",
-    name: "Auxiliar Jurisdiccional",
-    description: "Capacitación orientada a apoyo operativo dentro del expediente digital.",
+    id: "oficiales-jurisdiccionales",
+    name: "Oficiales Jurisdiccionales",
+    description:
+      "Rutas para apoyar la gestión diaria de expedientes, promociones, validaciones y elaboración de documentos jurisdiccionales.",
   },
   {
-    id: "5dc5f9fec6c7c06ce2a6b805",
-    name: "Oficial Jurisdiccional",
-    description: "Rutas sobre registro, validación, integración y gestión documental.",
+    id: "oficiales-partes",
+    name: "Oficiales de Partes",
+    description:
+      "Contenido enfocado en registro, recepción, integración inicial y canalización de promociones o documentos dentro del sistema.",
   },
   {
-    id: "5dc5fc92c6c7c06ce2a6b80b",
-    name: "Archivista",
-    description: "Contenido enfocado en integración, organización y consulta de expedientes.",
+    id: "archivistas",
+    name: "Archivistas",
+    description:
+      "Capacitación para organización, consulta, integración, control documental y seguimiento de expedientes digitales.",
   },
   {
-    id: "5e4c84d2a763c3369cf78430",
-    name: "Sesiones",
-    description: "Material orientado a preparación, seguimiento y consulta de sesiones.",
+    id: "actuarios",
+    name: "Actuarios",
+    description:
+      "Rutas relacionadas con preparación, registro, seguimiento y control de notificaciones dentro del Juicio en Línea 2.0.",
   },
   {
-    id: "5dc5fd8bc6c7c06ce2a6b813",
-    name: "Personal de Apoyo",
-    description: "Rutas de apoyo para actividades administrativas y operativas.",
+    id: "secretarios-secretarios-acuerdos",
+    name: "Secretarios de Secretarios de Acuerdos",
+    description:
+      "Contenido de apoyo para seguimiento operativo, revisión de tareas, coordinación documental y acompañamiento a procesos de acuerdo.",
   },
   {
-    id: "5dc5fa3ac6c7c06ce2a6b807",
-    name: "Personal Jurisdiccional",
-    description: "Capacitación general para operación de procesos jurisdiccionales.",
+    id: "auxiliares-sala",
+    name: "Auxiliares de Sala",
+    description:
+      "Rutas introductorias para consulta, apoyo administrativo, control de información y acompañamiento en tareas de sala.",
   },
 ];
 

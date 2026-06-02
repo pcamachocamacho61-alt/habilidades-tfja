@@ -34,17 +34,43 @@ export function CourseStepSidebar({
   }
 
   function getStepLabel(step: LearningStep) {
-    if (step.type === "welcome") {
-      return "Bienvenida";
-    }
-
-    if (step.type === "evaluation") {
-      return step.id === "evaluacion-final" ? "Evaluación final" : "Checkpoint";
-    }
-
-    return step.estimatedTime;
+  if (step.type === "welcome") {
+    return "Bienvenida";
   }
 
+  if (step.type === "evaluation") {
+    if (step.id === "evaluacion-1" || step.id === "evaluacion-1") {
+      return "Evaluación 1";
+    }
+
+    if (step.id === "evaluacion-2" || step.id === "evaluacion-2") {
+      return "Evaluación 2";
+    }
+
+    if (step.id === "evaluacion-final") {
+      return "Evaluación final";
+    }
+
+    return "Evaluación";
+  }
+
+  return step.estimatedTime;
+}
+function getStepTitle(step: LearningStep) {
+  if (step.id === "evaluacion-1" || step.id === "evaluacion-1") {
+    return "Evaluación 1";
+  }
+
+  if (step.id === "evaluacion-2" || step.id === "evaluacion-2") {
+    return "Evaluación 2";
+  }
+
+  if (step.id === "evaluacion-final") {
+    return "Evaluación final";
+  }
+
+  return step.title;
+}
   function getIndicatorClass(step: LearningStep, completed: boolean) {
     if (completed) {
       return "mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#0b376d] text-[10px] font-bold text-white";
@@ -104,7 +130,7 @@ export function CourseStepSidebar({
       </span>
 
       <div>
-        <p className="text-sm font-bold text-slate-500">{step.title}</p>
+        <p className="text-sm font-bold text-slate-500">{getStepTitle(step)}</p>
 
         <p className="mt-1 text-xs text-slate-400">Bloqueado</p>
       </div>
@@ -126,7 +152,7 @@ export function CourseStepSidebar({
       </span>
 
       <div>
-        <p className="text-sm font-bold text-[#061b3a]">{step.title}</p>
+        <p className="text-sm font-bold text-[#061b3a]">{getStepTitle(step)}</p>
 
         <p className="mt-1 text-xs text-slate-500">
           {getStepLabel(step)}
