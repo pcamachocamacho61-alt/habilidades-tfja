@@ -6,23 +6,40 @@ import { useEffect, useState } from "react";
 import { getOneDriveBadgeInfo } from "@/lib/badges";
 
 const BADGE_KEY = "habilidades-tfja:onedrive-descubre:badge";
+const FINAL_RESULT_KEY =
+  "htfja-final-onedrive-descubre-evaluacion-final-result";
 
 export function FinalBadgeCard() {
   const [badgeValue, setBadgeValue] = useState<string | null>(null);
+  const [approved, setApproved] = useState(false);
 
   useEffect(() => {
-    const savedBadge = window.localStorage.getItem(BADGE_KEY);
-    setBadgeValue(savedBadge);
+    try {
+      const savedBadge = window.localStorage.getItem(BADGE_KEY);
+      const savedResult = window.localStorage.getItem(FINAL_RESULT_KEY);
+
+      if (!savedResult) {
+        return;
+      }
+
+      const parsedResult = JSON.parse(savedResult) as { approved?: boolean };
+
+      setApproved(Boolean(parsedResult.approved));
+      setBadgeValue(savedBadge);
+    } catch {
+      setApproved(false);
+      setBadgeValue(null);
+    }
   }, []);
 
   const badgeInfo = getOneDriveBadgeInfo(badgeValue);
 
-  if (!badgeInfo) {
+  if (!approved || !badgeInfo) {
     return null;
   }
 
   return (
-    <div className="mt-8 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-6">
+    <div className="mt-6 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-5 sm:p-5">
       <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a]">
         Insignia obtenida
       </p>
@@ -33,11 +50,11 @@ export function FinalBadgeCard() {
           alt={badgeInfo.title}
           width={180}
           height={180}
-          className="mx-auto h-auto w-[180px]"
+          className="mx-auto h-auto w-[150px] sm:w-[180px]"
         />
 
-        <div className="text-left">
-          <h2 className="text-3xl font-black text-[#061b3a]">
+        <div className="text-center md:text-left">
+          <h2 className="text-2xl font-black text-[#061b3a] sm:text-2xl">
             {badgeInfo.title}
           </h2>
 
@@ -47,7 +64,7 @@ export function FinalBadgeCard() {
 
           <Link
             href="/herramientas-digitales/insignias"
-            className="mt-5 inline-flex rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white hover:bg-[#061b3a]"
+            className="mt-5 inline-flex rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a]"
           >
             Ver mis insignias
           </Link>

@@ -1,277 +1,206 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { onedriveDescubreSteps } from "@/data/onedrive-descubre";
-import { getOneDriveBadgeInfo } from "@/lib/badges";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { LearningAlert, AlertStatus } from "@/types/learning";
+import {
+  getLearningAlerts,
+  LEARNING_EVENTS,
+  updateLearningAlertStatus,
+} from "@/lib/learning-storage";
+import { getCurrentAlerts } from "@/lib/learning-api";
 
-type FinalResult = {
-  correctAnswers: number;
-  wrongAnswers: number;
-  approved: boolean;
-  badge: "gold" | "silver" | "bronze" | null;
-  attemptNumber: number;
-};
+const FILTERS: Array<{ value: "all" | AlertStatus; label: string }> = [
+  { value: "all", label: "Todas" },
+  { value: "new", label: "Nuevas" },
+  { value: "read", label: "Leídas" },
+  { value: "attended", label: "Atendidas" },
+  { value: "archived", label: "Archivadas" },
+];
 
-type AlertItem = {
-  id: string;
-  title: string;
-  description: string;
-  href: string;
-  actionLabel: string;
-  tone: "info" | "warning" | "success" | "neutral";
-};
+function statusLabel(status: AlertStatus) {
+  if (status === "new") return "Nueva";
+  if (status === "read") return "Leída";
+  if (status === "attended") return "Atendida";
+  return "Archivada";
+}
 
-const COMPLETED_KEY = "habilidades-tfja:onedrive-descubre:completed";
-const RESULT_KEY = "habilidades-tfja:onedrive-descubre:final-result";
-const BADGE_KEY = "habilidades-tfja:onedrive-descubre:badge";
+function formatDate(value: string) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Fecha no disponible"
+    : date.toLocaleString("es-MX", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+}
 
 export function AlertsPanel() {
-  const [completedIds, setCompletedIds] = useState<string[]>([]);
-  const [finalResult, setFinalResult] = useState<FinalResult | null>(null);
-  const [badgeValue, setBadgeValue] = useState<string | null>(null);
+  const [alerts, setAlerts] = useState<LearningAlert[]>([]);
+  const [filter, setFilter] = useState<"all" | AlertStatus>("all");
+  const [loaded, setLoaded] = useState(false);
 
-  useEffect(() => {
-    const savedCompleted = window.localStorage.getItem(COMPLETED_KEY);
-    const savedResult = window.localStorage.getItem(RESULT_KEY);
-    const savedBadge = window.localStorage.getItem(BADGE_KEY);
-
-    if (savedCompleted) {
-      setCompletedIds(JSON.parse(savedCompleted));
-    }
-
-    if (savedResult) {
-      setFinalResult(JSON.parse(savedResult));
-    }
-
-    if (savedBadge) {
-      setBadgeValue(savedBadge);
+  const loadAlerts = useCallback(async () => {
+    try {
+      const databaseAlerts = await getCurrentAlerts();
+      window.localStorage.setItem("habilidades-tfja:alerts", JSON.stringify(databaseAlerts));
+      setAlerts(databaseAlerts);
+    } catch {
+      setAlerts(getLearningAlerts());
+    } finally {
+      setLoaded(true);
     }
   }, []);
 
-  const progress = useMemo(() => {
-    if (onedriveDescubreSteps.length === 0) {
-      return 0;
-    }
+  useEffect(() => {
+    void loadAlerts();
+    window.addEventListener(LEARNING_EVENTS.alertsUpdated, loadAlerts);
+    window.addEventListener("storage", loadAlerts);
+    return () => {
+      window.removeEventListener(LEARNING_EVENTS.alertsUpdated, loadAlerts);
+      window.removeEventListener("storage", loadAlerts);
+    };
+  }, [loadAlerts]);
 
-    return Math.round(
-      (completedIds.length / onedriveDescubreSteps.length) * 100
-    );
-  }, [completedIds.length]);
-
-  const badgeInfo = getOneDriveBadgeInfo(badgeValue);
-
-  const contentBeforeFinal = onedriveDescubreSteps.filter(
-    (step) => step.id !== "evaluacion-final"
+  const filteredAlerts = useMemo(
+    () =>
+      filter === "all"
+        ? alerts
+        : alerts.filter((alert) => alert.status === filter),
+    [alerts, filter]
   );
 
-  const completedBeforeFinal = contentBeforeFinal.filter((step) =>
-    completedIds.includes(step.id)
+  const newCount = alerts.filter((alert) => alert.status === "new").length;
+  const pendingCount = alerts.filter(
+    (alert) => alert.status === "new" || alert.status === "read"
   ).length;
 
-  const progressBeforeFinal = Math.round(
-    (completedBeforeFinal / contentBeforeFinal.length) * 100
-  );
-
-  const alerts: AlertItem[] = [];
-
-  if (progress === 0) {
-    alerts.push({
-      id: "start-onedrive",
-      title: "Comienza tu ruta OneDrive Descubre",
-      description:
-        "Todavía no has iniciado la ruta. Puedes comenzar con pasos breves para conocer OneDrive.",
-      href: "/herramientas-digitales/onedrive/descubre",
-      actionLabel: "Iniciar ruta",
-      tone: "info",
-    });
+  function setStatus(alertId: string, status: AlertStatus) {
+    updateLearningAlertStatus(alertId, status);
+    void loadAlerts();
   }
 
-  if (progress > 0 && progress < 100) {
-    alerts.push({
-      id: "continue-onedrive",
-      title: "Continúa tu ruta OneDrive Descubre",
-      description: `Tu avance actual es de ${progress}%. Puedes continuar desde la ruta para completar los pasos pendientes.`,
-      href: "/herramientas-digitales/onedrive/descubre",
-      actionLabel: "Continuar ruta",
-      tone: "info",
-    });
-  }
-
-  if (progressBeforeFinal < 100) {
-    alerts.push({
-      id: "final-locked",
-      title: "Evaluación final bloqueada",
-      description: `Necesitas completar el 100% de los pasos y checkpoints previos. Tu avance antes de la evaluación final es de ${progressBeforeFinal}%.`,
-      href: "/herramientas-digitales/onedrive/descubre/paso-1",
-      actionLabel: "Completar pasos",
-      tone: "warning",
-    });
-  }
-
-  if (progressBeforeFinal === 100 && !finalResult?.approved) {
-    alerts.push({
-      id: "final-ready",
-      title: "Evaluación final disponible",
-      description:
-        "Ya completaste los pasos previos. Ahora puedes presentar la evaluación final de OneDrive Descubre.",
-      href: "/herramientas-digitales/onedrive/descubre/evaluacion-final",
-      actionLabel: "Ir a evaluación final",
-      tone: "warning",
-    });
-  }
-
-  if (finalResult && !finalResult.approved) {
-    alerts.push({
-      id: "final-not-approved",
-      title: "Evaluación final no aprobada",
-      description:
-        "No alcanzaste el mínimo requerido. Repasa la ruta y vuelve a intentarlo si aún tienes intentos disponibles.",
-      href: "/herramientas-digitales/onedrive/descubre/paso-1",
-      actionLabel: "Repasar ruta",
-      tone: "warning",
-    });
-  }
-
-  if (badgeInfo) {
-    alerts.push({
-      id: "badge-earned",
-      title: `Insignia obtenida: ${badgeInfo.title}`,
-      description:
-        "Ya tienes una insignia registrada por tu desempeño en la ruta OneDrive Descubre.",
-      href: "/herramientas-digitales/insignias",
-      actionLabel: "Ver insignia",
-      tone: "success",
-    });
-  }
-
-  alerts.push({
-    id: "coming-soon-outlook",
-    title: "Próximamente: Outlook Descubre",
-    description:
-      "Se podrá agregar una nueva ruta para fortalecer el uso de correo, calendario y organización diaria.",
-    href: "/herramientas-digitales",
-    actionLabel: "Ver herramientas",
-    tone: "neutral",
-  });
-
-  function getAlertClass(tone: AlertItem["tone"]) {
-    if (tone === "success") {
-      return "border-emerald-200 bg-emerald-50";
-    }
-
-    if (tone === "warning") {
-      return "border-amber-200 bg-amber-50";
-    }
-
-    if (tone === "info") {
-      return "border-blue-200 bg-blue-50";
-    }
-
-    return "border-slate-200 bg-white";
-  }
-
-  function getBadgeClass(tone: AlertItem["tone"]) {
-    if (tone === "success") {
-      return "bg-emerald-600 text-white";
-    }
-
-    if (tone === "warning") {
-      return "bg-[#c78b3a] text-white";
-    }
-
-    if (tone === "info") {
-      return "bg-[#0b376d] text-white";
-    }
-
-    return "bg-slate-500 text-white";
+  if (!loaded) {
+    return (
+      <section className="rounded-[28px] bg-white/60 p-5">
+        <p className="text-sm font-bold text-slate-600">Cargando alertas...</p>
+      </section>
+    );
   }
 
   return (
-    <section className="rounded-[32px] bg-white/60 p-6">
-      <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
+    <section className="rounded-[28px] bg-white/60 p-4 sm:p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div>
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a]">
             Centro de avisos
           </p>
-
-          <h1 className="mt-3 text-3xl font-black text-[#061b3a]">
-            Alertas
-          </h1>
-
+          <h1 className="mt-3 text-2xl font-black text-[#061b3a]">Alertas</h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-            Consulta avisos relacionados con tu avance, evaluaciones,
-            insignias y próximas rutas disponibles dentro de Habilidades TFJA.
+            Las alertas internas se conservan y pueden pasar por los estados
+            Nueva, Leída, Atendida y Archivada. No se eliminan.
           </p>
         </div>
 
-        <div className="rounded-3xl border border-white bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-            Resumen
-          </p>
-
-          <h2 className="mt-2 text-3xl font-black text-[#061b3a]">
-            {alerts.length}
-          </h2>
-
-          <p className="mt-1 text-sm font-semibold text-slate-500">
-            Alertas disponibles
-          </p>
-
-          <div className="mt-5 rounded-2xl bg-[#f5f8fd] p-4">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
-              Avance OneDrive
-            </p>
-
-            <p className="mt-1 text-xl font-black text-[#061b3a]">
-              {progress}%
-            </p>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-3xl bg-white p-5 text-center shadow-sm">
+            <p className="text-xs font-bold uppercase text-slate-400">Nuevas</p>
+            <p className="mt-2 text-3xl font-black text-[#061b3a]">{newCount}</p>
+          </div>
+          <div className="rounded-3xl bg-white p-5 text-center shadow-sm">
+            <p className="text-xs font-bold uppercase text-slate-400">Pendientes</p>
+            <p className="mt-2 text-3xl font-black text-[#061b3a]">{pendingCount}</p>
           </div>
         </div>
       </div>
 
-      <div className="mt-8 space-y-4">
-        {alerts.map((alert) => (
-          <article
-            key={alert.id}
-            className={`rounded-[28px] border p-5 shadow-sm ${getAlertClass(
-              alert.tone
-            )}`}
+      <div className="mt-6 flex flex-wrap gap-2">
+        {FILTERS.map((item) => (
+          <button
+            key={item.value}
+            type="button"
+            onClick={() => setFilter(item.value)}
+            className={
+              filter === item.value
+                ? "rounded-full bg-[#0b376d] px-4 py-2 text-sm font-bold text-white"
+                : "rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-600"
+            }
           >
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <span
-                  className={`inline-flex rounded-full px-3 py-1 text-xs font-black uppercase tracking-[0.16em] ${getBadgeClass(
-                    alert.tone
-                  )}`}
-                >
-                  {alert.tone === "success"
-                    ? "Logro"
-                    : alert.tone === "warning"
-                      ? "Pendiente"
-                      : alert.tone === "info"
-                        ? "Aviso"
-                        : "Próximamente"}
-                </span>
-
-                <h2 className="mt-3 text-xl font-black text-[#061b3a]">
-                  {alert.title}
-                </h2>
-
-                <p className="mt-2 max-w-3xl text-sm leading-7 text-slate-600">
-                  {alert.description}
-                </p>
-              </div>
-
-              <Link
-                href={alert.href}
-                className="shrink-0 rounded-2xl bg-white px-5 py-3 text-center text-sm font-bold text-[#061b3a] shadow-sm hover:bg-slate-50"
-              >
-                {alert.actionLabel}
-              </Link>
-            </div>
-          </article>
+            {item.label}
+          </button>
         ))}
+      </div>
+
+      <div className="mt-6 space-y-4">
+        {filteredAlerts.length ? (
+          filteredAlerts.map((alert) => (
+            <article
+              key={alert.id}
+              className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"
+            >
+              <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="rounded-full bg-[#0b376d] px-3 py-1 text-xs font-black uppercase text-white">
+                      {alert.tone === "success"
+                        ? "Logro"
+                        : alert.tone === "warning"
+                          ? "Pendiente"
+                          : "Aviso"}
+                    </span>
+                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-black uppercase text-slate-600">
+                      {statusLabel(alert.status)}
+                    </span>
+                  </div>
+                  <h2 className="mt-3 text-xl font-black text-[#061b3a]">
+                    {alert.title}
+                  </h2>
+                  <p className="mt-2 text-sm leading-7 text-slate-600">
+                    {alert.description}
+                  </p>
+                  <p className="mt-2 text-xs font-semibold text-slate-400">
+                    {formatDate(alert.createdAt)}
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {alert.status === "new" && (
+                    <button
+                      type="button"
+                      onClick={() => setStatus(alert.id, "read")}
+                      className="rounded-2xl border border-slate-200 px-4 py-2 text-xs font-bold"
+                    >
+                      Marcar leída
+                    </button>
+                  )}
+                  {(alert.status === "new" || alert.status === "read") && (
+                    <button
+                      type="button"
+                      onClick={() => setStatus(alert.id, "attended")}
+                      className="rounded-2xl border border-emerald-200 px-4 py-2 text-xs font-bold text-emerald-700"
+                    >
+                      Atendida
+                    </button>
+                  )}
+                  {alert.status !== "archived" && (
+                    <button
+                      type="button"
+                      onClick={() => setStatus(alert.id, "archived")}
+                      className="rounded-2xl border border-violet-200 px-4 py-2 text-xs font-bold text-violet-700"
+                    >
+                      Archivar
+                    </button>
+                  )}
+                </div>
+              </div>
+            </article>
+          ))
+        ) : (
+          <div className="rounded-[24px] border border-dashed border-slate-300 bg-white p-6 text-center">
+            <p className="font-bold text-[#061b3a]">
+              No hay alertas en esta categoría.
+            </p>
+          </div>
+        )}
       </div>
     </section>
   );

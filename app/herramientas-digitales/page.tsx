@@ -3,7 +3,7 @@ import { digitalTools } from "@/data/digital-tools";
 
 export default function DigitalToolsPage() {
   return (
-    <div className="relative overflow-hidden rounded-[32px] bg-white/35 p-6">
+    <div className="relative overflow-hidden rounded-[28px] bg-white/35 p-5">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_95%_30%,rgba(59,130,246,0.16),transparent_35%)]" />
 
       <div className="relative z-10">
@@ -17,7 +17,7 @@ export default function DigitalToolsPage() {
           Haz clic en un curso para comenzar o continuar tu aprendizaje.
         </p>
 
-      <div className="mt-8 grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="mt-6 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
   {digitalTools.map((tool) => (
     <DigitalToolCard key={tool.id} tool={tool} />
   ))}

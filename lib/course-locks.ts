@@ -4,31 +4,32 @@ export function isBlockCompleted(
   steps: LearningStep[],
   completedIds: string[],
   blockNumber: 1 | 2 | 3
-) {
+): boolean {
+  const uniqueCompletedIds = new Set(completedIds);
   const blockSteps = steps.filter((step) => step.block === blockNumber);
 
-  return blockSteps.every((step) => completedIds.includes(step.id));
+  return blockSteps.length > 0 && blockSteps.every((step) => uniqueCompletedIds.has(step.id));
+}
+
+export function arePreviousStepsCompleted(
+  step: LearningStep,
+  steps: LearningStep[],
+  completedIds: string[]
+): boolean {
+  const currentIndex = steps.findIndex((item) => item.id === step.id);
+
+  if (currentIndex === -1) return false;
+  if (currentIndex === 0) return true;
+
+  const uniqueCompletedIds = new Set(completedIds);
+  return steps.slice(0, currentIndex).every((item) => uniqueCompletedIds.has(item.id));
 }
 
 export function isStepLocked(
   step: LearningStep,
   steps: LearningStep[],
   completedIds: string[]
-) {
-  const blockOneCompleted = isBlockCompleted(steps, completedIds, 1);
-  const blockTwoCompleted = isBlockCompleted(steps, completedIds, 2);
-
-  if (step.block === 1) {
-    return false;
-  }
-
-  if (step.block === 2) {
-    return !blockOneCompleted;
-  }
-
-  if (step.block === 3) {
-    return !blockTwoCompleted;
-  }
-
-  return false;
+): boolean {
+  if (completedIds.includes(step.id)) return false;
+  return !arePreviousStepsCompleted(step, steps, completedIds);
 }

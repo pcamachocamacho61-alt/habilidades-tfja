@@ -1,60 +1,317 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { BadgeType, FinalEvaluation } from "@/types/learning";
+import { getCurrentEvaluationAttempts, saveBadgeInDatabase, saveEvaluationAttemptInDatabase } from "@/lib/learning-api";
 
 type FinalEvaluationPanelProps = {
   finalEvaluation: FinalEvaluation;
+  routeId?: string;
+  toolId?: string;
+  levelId?: string;
   currentStepCompleted: boolean;
   canStartFinalEvaluation: boolean;
   routeProgressBeforeFinal: number;
   onApproved: () => void;
+  onAttemptsExhausted?: () => void;
+};
+
+type EvaluationAttempt = {
+  attemptNumber: number;
+  correctAnswers: number;
+  wrongAnswers: number;
+  approved: boolean;
+  completedAt: string;
 };
 
 type FinalResult = {
   correctAnswers: number;
   wrongAnswers: number;
   approved: boolean;
-  badge: BadgeType | null;
+  badge: BadgeType;
   attemptNumber: number;
+  accumulatedCorrectAnswers: number;
+  bestCorrectAnswers: number;
+  completedAt: string;
+};
+
+type StoredFinalProgress = {
+  attemptsUsed: number;
+  bestCorrectAnswers: number;
+  approved: boolean;
+  badge: BadgeType;
+  accumulatedCorrectAnswers: number;
+  attempts: EvaluationAttempt[];
 };
 
 type EvaluationView = "intro" | "questions" | "summary" | "result";
 
-const ATTEMPTS_KEY = "habilidades-tfja:onedrive-descubre:final-attempts";
-const RESULT_KEY = "habilidades-tfja:onedrive-descubre:final-result";
-const BADGE_KEY = "habilidades-tfja:onedrive-descubre:badge";
+const BADGE_UPDATED_EVENT = "habilidades-tfja:badge-updated";
+
+function createInitialProgress(): StoredFinalProgress {
+  return {
+    attemptsUsed: 0,
+    bestCorrectAnswers: 0,
+    approved: false,
+    badge: "repeat",
+    accumulatedCorrectAnswers: 0,
+    attempts: [],
+  };
+}
+
+function shuffleQuestionIndexes(totalQuestions: number): number[] {
+  const indexes = Array.from({ length: totalQuestions }, (_, index) => index);
+
+  for (let currentIndex = indexes.length - 1; currentIndex > 0; currentIndex--) {
+    const randomIndex = Math.floor(Math.random() * (currentIndex + 1));
+
+    [indexes[currentIndex], indexes[randomIndex]] = [
+      indexes[randomIndex],
+      indexes[currentIndex],
+    ];
+  }
+
+  return indexes;
+}
+
+function getBadgeByFinalScore(correctAnswers: number): BadgeType {
+  if (correctAnswers === 10) {
+    return "gold";
+  }
+
+  if (correctAnswers >= 8) {
+    return "silver";
+  }
+
+  if (correctAnswers === 7) {
+    return "bronze";
+  }
+
+  return "repeat";
+}
+
+function getBadgeLabel(badge: BadgeType): string {
+  if (badge === "gold") {
+    return "OneDrive Oro";
+  }
+
+  if (badge === "silver") {
+    return "OneDrive Plata";
+  }
+
+  if (badge === "bronze") {
+    return "OneDrive Bronce";
+  }
+
+  return "Repetir";
+}
+
+function getBadgeStyles(badge: BadgeType): string {
+  if (badge === "gold") {
+    return "border-yellow-300 bg-yellow-50 text-yellow-800";
+  }
+
+  if (badge === "silver") {
+    return "border-slate-300 bg-slate-50 text-slate-700";
+  }
+
+  if (badge === "bronze") {
+    return "border-orange-300 bg-orange-50 text-orange-800";
+  }
+
+  return "border-red-200 bg-red-50 text-red-700";
+}
+
+function formatAttemptDate(value: string): string {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Fecha no disponible";
+  }
+
+  return date.toLocaleString("es-MX", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
 
 export function FinalEvaluationPanel({
   finalEvaluation,
+  routeId = "onedrive-descubre",
+  toolId = "onedrive",
+  levelId = "descubre",
   currentStepCompleted,
   canStartFinalEvaluation,
   routeProgressBeforeFinal,
   onApproved,
+  onAttemptsExhausted,
 }: FinalEvaluationPanelProps) {
-  const totalSeconds = finalEvaluation.timeLimitMinutes * 60;
+  const evaluationId =
+    finalEvaluation.id ?? `${routeId}-evaluacion-final`;
+  const badgeStorageKey = `habilidades-tfja:${routeId}:badge`;
+
+  const storageKey = `htfja-final-${evaluationId}`;
+  const resultStorageKey = `${storageKey}-result`;
+
+  const timeLimitMinutes = finalEvaluation.timeLimitMinutes ?? 10;
+  const totalSeconds = timeLimitMinutes * 60;
+  const totalQuestions = Math.min(
+    finalEvaluation.questionCount ?? finalEvaluation.questions.length,
+    finalEvaluation.questions.length
+  );
 
   const [view, setView] = useState<EvaluationView>("intro");
-  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>({});
+  const [selectedAnswers, setSelectedAnswers] = useState<Record<number, string>>(
+    {}
+  );
+  const [questionOrder, setQuestionOrder] = useState<number[]>(() =>
+    shuffleQuestionIndexes(finalEvaluation.questions.length).slice(
+      0,
+      totalQuestions
+    )
+  );
   const [remainingSeconds, setRemainingSeconds] = useState(totalSeconds);
-  const [attemptsUsed, setAttemptsUsed] = useState(0);
+  const [progress, setProgress] =
+    useState<StoredFinalProgress>(createInitialProgress);
   const [result, setResult] = useState<FinalResult | null>(null);
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentQuestionPosition, setCurrentQuestionPosition] = useState(0);
+  const [isLoaded, setIsLoaded] = useState(false);
+
+  const answeredQuestions = useMemo(
+    () => Object.keys(selectedAnswers).length,
+    [selectedAnswers]
+  );
+
+  const pendingQuestions = totalQuestions - answeredQuestions;
+
+  const attemptsRemaining = Math.max(
+    finalEvaluation.maxAttempts - progress.attemptsUsed,
+    0
+  );
+
+  const attemptsExhausted =
+    !progress.approved &&
+    progress.attemptsUsed >= finalEvaluation.maxAttempts;
+
+  const canStart =
+    attemptsRemaining > 0 &&
+    !currentStepCompleted &&
+    !progress.approved &&
+    canStartFinalEvaluation;
+
+  const currentQuestionOriginalIndex =
+    questionOrder[currentQuestionPosition];
+
+  const currentQuestion =
+    finalEvaluation.questions[currentQuestionOriginalIndex];
+
+  const selectedCurrentAnswer =
+    selectedAnswers[currentQuestionOriginalIndex];
+
+  const isFirstQuestion = currentQuestionPosition === 0;
+  const isLastQuestion =
+    currentQuestionPosition === questionOrder.length - 1;
+
+  const minutes = Math.floor(remainingSeconds / 60);
+  const seconds = remainingSeconds % 60;
+
+  const formattedTime = `${String(minutes).padStart(2, "0")}:${String(
+    seconds
+  ).padStart(2, "0")}`;
 
   useEffect(() => {
-    const savedAttempts = window.localStorage.getItem(ATTEMPTS_KEY);
-    const savedResult = window.localStorage.getItem(RESULT_KEY);
+    try {
+      const storedProgress = window.localStorage.getItem(storageKey);
+      const storedResult = window.localStorage.getItem(resultStorageKey);
 
-    if (savedAttempts) {
-      setAttemptsUsed(Number(savedAttempts));
+      if (storedProgress) {
+        const parsedProgress = JSON.parse(
+          storedProgress
+        ) as Partial<StoredFinalProgress>;
+
+        const bestCorrectAnswers =
+          Number(parsedProgress.bestCorrectAnswers) || 0;
+
+        const badge = getBadgeByFinalScore(bestCorrectAnswers);
+
+        setProgress({
+          attemptsUsed: Number(parsedProgress.attemptsUsed) || 0,
+          bestCorrectAnswers,
+          approved: Boolean(parsedProgress.approved),
+          badge,
+          accumulatedCorrectAnswers: bestCorrectAnswers,
+          attempts: Array.isArray(parsedProgress.attempts)
+            ? parsedProgress.attempts
+            : [],
+        });
+      }
+
+      if (storedResult) {
+        const parsedResult = JSON.parse(
+          storedResult
+        ) as Partial<FinalResult>;
+
+        const bestCorrectAnswers =
+          Number(parsedResult.bestCorrectAnswers) ||
+          Number(parsedResult.accumulatedCorrectAnswers) ||
+          Number(parsedResult.correctAnswers) ||
+          0;
+
+        const normalizedResult: FinalResult = {
+          correctAnswers: Number(parsedResult.correctAnswers) || 0,
+          wrongAnswers:
+            Number(parsedResult.wrongAnswers) ||
+            Math.max(totalQuestions - (Number(parsedResult.correctAnswers) || 0), 0),
+          approved: Boolean(parsedResult.approved),
+          badge: getBadgeByFinalScore(bestCorrectAnswers),
+          attemptNumber: Number(parsedResult.attemptNumber) || 1,
+          accumulatedCorrectAnswers: bestCorrectAnswers,
+          bestCorrectAnswers,
+          completedAt:
+            typeof parsedResult.completedAt === "string"
+              ? parsedResult.completedAt
+              : new Date().toISOString(),
+        };
+
+        setResult(normalizedResult);
+        setView("result");
+      }
+    } catch {
+      setProgress(createInitialProgress());
+      setResult(null);
+      setView("intro");
+    } finally {
+      setIsLoaded(true);
+    }
+  }, [resultStorageKey, storageKey, totalQuestions]);
+
+  useEffect(() => {
+    if (!isLoaded) {
+      return;
     }
 
-    if (savedResult) {
-      const parsedResult = JSON.parse(savedResult) as FinalResult;
-      setResult(parsedResult);
-      setView("result");
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(progress));
+    } catch {
+      // La evaluación continúa funcionando aunque localStorage falle.
     }
-  }, []);
+  }, [isLoaded, progress, storageKey]);
+
+  useEffect(() => {
+    if (currentStepCompleted && isLoaded && !progress.approved) {
+      setProgress((currentProgress) => ({
+        ...currentProgress,
+        approved: true,
+      }));
+    }
+  }, [currentStepCompleted, isLoaded, progress.approved]);
+
+  useEffect(() => {
+    if (attemptsExhausted) {
+      onAttemptsExhausted?.();
+    }
+  }, [attemptsExhausted, onAttemptsExhausted]);
 
   useEffect(() => {
     if (view !== "questions") {
@@ -67,91 +324,29 @@ export function FinalEvaluationPanel({
     }
 
     const intervalId = window.setInterval(() => {
-      setRemainingSeconds((currentValue) => currentValue - 1);
+      setRemainingSeconds((currentSeconds) =>
+        Math.max(currentSeconds - 1, 0)
+      );
     }, 1000);
 
     return () => {
       window.clearInterval(intervalId);
     };
-  }, [view, remainingSeconds]);
-
-  const answeredQuestions = useMemo(() => {
-    return Object.keys(selectedAnswers).length;
-  }, [selectedAnswers]);
-
-  const pendingQuestions =
-    finalEvaluation.questions.length - answeredQuestions;
-
-  const minutes = Math.floor(remainingSeconds / 60);
-  const seconds = remainingSeconds % 60;
-
-  const formattedTime = `${String(minutes).padStart(2, "0")}:${String(
-    seconds
-  ).padStart(2, "0")}`;
-
-  const attemptsRemaining = finalEvaluation.maxAttempts - attemptsUsed;
-  const canStart =
-  attemptsRemaining > 0 &&
-  !currentStepCompleted &&
-  canStartFinalEvaluation;
-
-  const currentQuestion = finalEvaluation.questions[currentQuestionIndex];
-  const selectedCurrentAnswer = selectedAnswers[currentQuestionIndex];
-  const isFirstQuestion = currentQuestionIndex === 0;
-  const isLastQuestion =
-    currentQuestionIndex === finalEvaluation.questions.length - 1;
-
-  function getBadge(correctAnswers: number, attemptNumber: number): BadgeType | null {
-    if (correctAnswers === 10 && attemptNumber === 1) {
-      return "gold";
-    }
-
-    if (correctAnswers >= 8) {
-      return "silver";
-    }
-
-    if (correctAnswers >= 7) {
-      return "bronze";
-    }
-
-    return null;
-  }
-
-  function getBadgeLabel(badge: BadgeType | null): string {
-    if (badge === "gold") {
-      return "OneDrive Oro";
-    }
-
-    if (badge === "silver") {
-      return "OneDrive Plata";
-    }
-
-    if (badge === "bronze") {
-      return "OneDrive Bronce";
-    }
-
-    return "Sin insignia";
-  }
-
-  function getBadgeStyles(badge: BadgeType | null): string {
-    if (badge === "gold") {
-      return "border-yellow-300 bg-yellow-50 text-yellow-700";
-    }
-
-    if (badge === "silver") {
-      return "border-slate-300 bg-slate-50 text-slate-700";
-    }
-
-    if (badge === "bronze") {
-      return "border-orange-300 bg-orange-50 text-orange-700";
-    }
-
-    return "border-slate-200 bg-white text-slate-500";
-  }
+  }, [remainingSeconds, view]);
 
   function handleStart() {
+    if (!canStart) {
+      return;
+    }
+
     setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
+    setQuestionOrder(
+      shuffleQuestionIndexes(finalEvaluation.questions.length).slice(
+        0,
+        totalQuestions
+      )
+    );
+    setCurrentQuestionPosition(0);
     setRemainingSeconds(totalSeconds);
     setResult(null);
     setView("questions");
@@ -173,7 +368,9 @@ export function FinalEvaluationPanel({
       return;
     }
 
-    setCurrentQuestionIndex((currentIndex) => currentIndex - 1);
+    setCurrentQuestionPosition(
+      (currentPosition) => currentPosition - 1
+    );
   }
 
   function handleNextQuestion() {
@@ -181,11 +378,13 @@ export function FinalEvaluationPanel({
       return;
     }
 
-    setCurrentQuestionIndex((currentIndex) => currentIndex + 1);
+    setCurrentQuestionPosition(
+      (currentPosition) => currentPosition + 1
+    );
   }
 
   function handleGoToSummary() {
-    if (answeredQuestions < finalEvaluation.questions.length) {
+    if (answeredQuestions !== totalQuestions) {
       return;
     }
 
@@ -193,93 +392,183 @@ export function FinalEvaluationPanel({
   }
 
   function finishEvaluation() {
-    const correctAnswers = finalEvaluation.questions.reduce(
-      (totalCorrect, question, index) => {
-        const selectedAnswer = selectedAnswers[index];
+    if (view === "result" || progress.approved || attemptsExhausted) {
+      return;
+    }
 
-        if (selectedAnswer === question.correctAnswer) {
-          return totalCorrect + 1;
-        }
+    const correctAnswers = questionOrder.reduce(
+      (totalCorrect, questionIndex) => {
+        const question = finalEvaluation.questions[questionIndex];
+        const selectedAnswer = selectedAnswers[questionIndex];
 
-        return totalCorrect;
+        return selectedAnswer === question.correctAnswer
+          ? totalCorrect + 1
+          : totalCorrect;
       },
       0
     );
 
-    const wrongAnswers = finalEvaluation.questions.length - correctAnswers;
-    const nextAttemptNumber = attemptsUsed + 1;
-    const approved = correctAnswers >= finalEvaluation.minimumCorrectAnswers;
-    const badge = approved ? getBadge(correctAnswers, nextAttemptNumber) : null;
+    const wrongAnswers = totalQuestions - correctAnswers;
+    const nextAttemptNumber = progress.attemptsUsed + 1;
+    const bestCorrectAnswers = Math.max(
+      progress.bestCorrectAnswers,
+      correctAnswers
+    );
+    const evaluationApproved =
+      bestCorrectAnswers >= finalEvaluation.minimumCorrectAnswers;
+    const badge = getBadgeByFinalScore(bestCorrectAnswers);
+    const completedAt = new Date().toISOString();
+
+    const currentAttempt: EvaluationAttempt = {
+      attemptNumber: nextAttemptNumber,
+      correctAnswers,
+      wrongAnswers,
+      approved:
+        correctAnswers >= finalEvaluation.minimumCorrectAnswers,
+      completedAt,
+    };
 
     const finalResult: FinalResult = {
       correctAnswers,
       wrongAnswers,
-      approved,
+      approved: evaluationApproved,
       badge,
       attemptNumber: nextAttemptNumber,
+      accumulatedCorrectAnswers: bestCorrectAnswers,
+      bestCorrectAnswers,
+      completedAt,
     };
 
-    setAttemptsUsed(nextAttemptNumber);
+    const newProgress: StoredFinalProgress = {
+      attemptsUsed: nextAttemptNumber,
+      bestCorrectAnswers,
+      approved: evaluationApproved,
+      badge,
+      accumulatedCorrectAnswers: bestCorrectAnswers,
+      attempts: [...progress.attempts, currentAttempt],
+    };
+
+    setProgress(newProgress);
     setResult(finalResult);
     setView("result");
 
-    window.localStorage.setItem(ATTEMPTS_KEY, String(nextAttemptNumber));
-    window.localStorage.setItem(RESULT_KEY, JSON.stringify(finalResult));
+    try {
+      window.localStorage.setItem(
+        resultStorageKey,
+        JSON.stringify(finalResult)
+      );
+      window.localStorage.setItem(storageKey, JSON.stringify(newProgress));
 
-    if (badge) {
-      window.localStorage.setItem(BADGE_KEY, badge);
+      if (badge === "repeat") {
+        window.localStorage.removeItem(badgeStorageKey);
+      } else {
+        window.localStorage.setItem(badgeStorageKey, badge);
+      }
+
+      window.dispatchEvent(new CustomEvent(BADGE_UPDATED_EVENT));
+    } catch {
+      // La evaluación mantiene su resultado en memoria.
     }
 
-    if (approved) {
+    void saveEvaluationAttemptInDatabase({
+      routeId,
+      evaluationId,
+      evaluationType: "final",
+      attemptNumber: nextAttemptNumber,
+      correctAnswers,
+      wrongAnswers,
+      approved: currentAttempt.approved,
+      bestCorrectAnswers,
+      selectedAnswers,
+      durationSeconds: totalSeconds - remainingSeconds,
+      completedAt,
+    }).catch((error) => console.error("No fue posible guardar la evaluación final en MongoDB:", error));
+
+    if (badge !== "repeat") {
+      void saveBadgeInDatabase({
+        routeId,
+        toolId,
+        level: levelId as "descubre" | "potencia",
+        badgeType: badge,
+        score: bestCorrectAnswers,
+      }).catch((error) => console.error("No fue posible guardar la insignia en MongoDB:", error));
+    }
+
+    if (evaluationApproved) {
       onApproved();
+      return;
+    }
+
+    if (nextAttemptNumber >= finalEvaluation.maxAttempts) {
+      onAttemptsExhausted?.();
     }
   }
 
   function handleRetry() {
-    if (attemptsUsed >= finalEvaluation.maxAttempts) {
+    if (
+      progress.approved ||
+      progress.attemptsUsed >= finalEvaluation.maxAttempts
+    ) {
       return;
     }
 
-    window.localStorage.removeItem(RESULT_KEY);
+    try {
+      window.localStorage.removeItem(resultStorageKey);
+    } catch {
+      // La evaluación puede reiniciarse en memoria.
+    }
+
     setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
+    setQuestionOrder(
+      shuffleQuestionIndexes(finalEvaluation.questions.length).slice(
+        0,
+        totalQuestions
+      )
+    );
+    setCurrentQuestionPosition(0);
     setRemainingSeconds(totalSeconds);
     setResult(null);
     setView("intro");
   }
 
-  function handleResetFinalEvaluation() {
-    window.localStorage.removeItem(ATTEMPTS_KEY);
-    window.localStorage.removeItem(RESULT_KEY);
-    window.localStorage.removeItem(BADGE_KEY);
-
-    setAttemptsUsed(0);
-    setSelectedAnswers({});
-    setCurrentQuestionIndex(0);
-    setRemainingSeconds(totalSeconds);
-    setResult(null);
-    setView("intro");
+  if (!isLoaded) {
+    return (
+      <div className="mt-6 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-4 sm:p-5">
+        <p className="text-sm font-bold text-slate-600">
+          Cargando evaluación final...
+        </p>
+      </div>
+    );
   }
 
   return (
-    <div className="mt-8 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-6">
+    <div className="mt-6 rounded-3xl border border-[#ead7b8] bg-[#fff8ef] p-4 sm:p-5">
       <div className="flex flex-col gap-4 border-b border-[#ead7b8] pb-5 md:flex-row md:items-center md:justify-between">
         <div>
-          <h3 className="text-xl font-bold text-[#061b3a]">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-[#c78b3a]">
+            {finalEvaluation.title ?? "Evaluación final"}
+          </p>
+
+          <h3 className="mt-2 text-xl font-bold text-[#061b3a]">
             Evaluación final
           </h3>
 
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Responde 10 preguntas. Apruebas con al menos{" "}
-            <strong>{finalEvaluation.minimumCorrectAnswers}</strong> correctas.
-            Tienes máximo <strong>{finalEvaluation.maxAttempts}</strong> intentos.
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+            Responde las {totalQuestions} preguntas. Para aprobar necesitas al
+            menos{" "}
+            <strong>
+              {finalEvaluation.minimumCorrectAnswers} respuestas correctas
+            </strong>
+            . Tienes un máximo de{" "}
+            <strong>{finalEvaluation.maxAttempts} intentos</strong>.
           </p>
         </div>
 
-        <div className="rounded-2xl bg-white px-5 py-4 text-center shadow-sm">
+        <div className="w-full rounded-2xl bg-white px-5 py-4 text-center shadow-sm md:w-auto md:min-w-[140px]">
           <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
             Tiempo
           </p>
+
           <p
             className={
               remainingSeconds <= 120
@@ -292,60 +581,80 @@ export function FinalEvaluationPanel({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-3 md:grid-cols-3">
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-2xl bg-white p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
             Intentos usados
           </p>
+
           <p className="mt-1 text-xl font-black text-[#061b3a]">
-            {attemptsUsed}/{finalEvaluation.maxAttempts}
+            {progress.attemptsUsed}/{finalEvaluation.maxAttempts}
           </p>
         </div>
 
         <div className="rounded-2xl bg-white p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
             Contestadas
           </p>
+
           <p className="mt-1 text-xl font-black text-[#061b3a]">
-            {answeredQuestions}/{finalEvaluation.questions.length}
+            {answeredQuestions}/{totalQuestions}
           </p>
         </div>
 
         <div className="rounded-2xl bg-white p-4">
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+            Mejor resultado
+          </p>
+
+          <p className="mt-1 text-xl font-black text-[#061b3a]">
+            {progress.bestCorrectAnswers}/{totalQuestions}
+          </p>
+        </div>
+
+        <div className="rounded-2xl bg-white p-4">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
             Estado
           </p>
+
           <p className="mt-1 text-xl font-black text-[#061b3a]">
-            {currentStepCompleted ? "Aprobada" : "Pendiente"}
+            {currentStepCompleted || progress.approved
+              ? "Aprobada"
+              : attemptsExhausted
+                ? "Bloqueada"
+                : "Pendiente"}
           </p>
         </div>
       </div>
-{!canStartFinalEvaluation && (
-  <div className="mb-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
-    <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-700">
-      Evaluación bloqueada
-    </p>
 
-    <h4 className="mt-2 text-xl font-black text-[#061b3a]">
-      Completa primero tu ruta
-    </h4>
+      {!canStartFinalEvaluation && !currentStepCompleted && (
+        <div className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-5">
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-amber-700">
+            Evaluación bloqueada
+          </p>
 
-    <p className="mt-3 text-sm leading-7 text-slate-600">
-      Para iniciar la evaluación final necesitas tener el 100% de avance en los
-      pasos y checkpoints previos. Tu avance actual antes de la evaluación final
-      es de <strong>{routeProgressBeforeFinal}%</strong>.
-    </p>
+          <h4 className="mt-2 text-xl font-black text-[#061b3a]">
+            Completa primero la ruta
+          </h4>
 
-    <a
-      href="/herramientas-digitales/onedrive/descubre/paso-1"
-      className="mt-5 inline-flex rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white hover:bg-[#061b3a]"
-    >
-      Continuar ruta
-    </a>
-  </div>
-)}
+          <p className="mt-3 text-sm leading-7 text-slate-600">
+            Para iniciar la evaluación final necesitas completar todos los
+            pasos y aprobar las dos evaluaciones previas. Tu avance actual antes
+            de la evaluación final es de{" "}
+            <strong>{routeProgressBeforeFinal}%</strong>.
+          </p>
+
+          <Link
+            href="/herramientas-digitales/onedrive/descubre/paso-1"
+            className="mt-5 inline-flex w-full justify-center rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a] sm:w-auto"
+          >
+            Continuar ruta
+          </Link>
+        </div>
+      )}
+
       {view === "intro" && (
-        <div className="mt-6 rounded-3xl bg-white p-6">
+        <div className="mt-6 rounded-3xl bg-white p-5 sm:p-5">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a]">
             Antes de iniciar
           </p>
@@ -355,52 +664,59 @@ export function FinalEvaluationPanel({
           </h4>
 
           <ul className="mt-4 space-y-3 text-sm leading-6 text-slate-600">
-            <li>• Tendrás {finalEvaluation.timeLimitMinutes} minutos.</li>
-            <li>• Son {finalEvaluation.questions.length} preguntas.</li>
-            <li>• Solo tienes {finalEvaluation.maxAttempts} intentos.</li>
+            <li>• Tendrás {timeLimitMinutes} minutos.</li>
+            <li>• La evaluación contiene {totalQuestions} preguntas.</li>
             <li>
-              • Apruebas con {finalEvaluation.minimumCorrectAnswers} respuestas
-              correctas.
+              • Debes obtener al menos{" "}
+              {finalEvaluation.minimumCorrectAnswers} respuestas correctas.
             </li>
-            <li>• La insignia dependerá de tu resultado.</li>
+            <li>
+              • Cuentas con un máximo de {finalEvaluation.maxAttempts} intentos.
+            </li>
+            <li>• Se conservará tu mejor número de aciertos.</li>
+            <li>
+              • La insignia se calcula únicamente con el mejor resultado de esta
+              evaluación final.
+            </li>
           </ul>
 
-         <button
-  type="button"
-  onClick={handleStart}
-  disabled={!canStart}
-  className={
-    canStart
-      ? "mt-6 rounded-2xl bg-[#0b376d] px-6 py-3 text-sm font-bold text-white hover:bg-[#061b3a]"
-      : "mt-6 cursor-not-allowed rounded-2xl bg-slate-300 px-6 py-3 text-sm font-bold text-white"
-  }
->
-  {!canStartFinalEvaluation
-    ? "Completa la ruta para iniciar"
-    : attemptsRemaining > 0
-      ? "Iniciar evaluación final"
-      : "Intentos agotados"}
-</button>
+          <button
+            type="button"
+            onClick={handleStart}
+            disabled={!canStart}
+            className={
+              canStart
+                ? "mt-6 w-full rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a] sm:w-auto"
+                : "mt-6 w-full cursor-not-allowed rounded-2xl bg-slate-300 px-5 py-3 text-sm font-bold text-white sm:w-auto"
+            }
+          >
+            {!canStartFinalEvaluation
+              ? "Completa la ruta para iniciar"
+              : progress.approved
+                ? "Evaluación aprobada"
+                : attemptsRemaining > 0
+                  ? "Iniciar evaluación final"
+                  : "Intentos agotados"}
+          </button>
         </div>
       )}
 
       {view === "questions" && currentQuestion && (
         <div className="mt-6">
-          <div className="rounded-3xl border border-slate-200 bg-white p-5">
+          <div className="rounded-3xl border border-slate-200 bg-white p-4 sm:p-5">
             <div className="flex flex-col gap-4 border-b border-slate-200 pb-4 md:flex-row md:items-center md:justify-between">
               <div>
                 <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#c78b3a]">
-                  Pregunta {currentQuestionIndex + 1} de{" "}
-                  {finalEvaluation.questions.length}
+                  Pregunta {currentQuestionPosition + 1} de {totalQuestions}
                 </p>
 
-                <h4 className="mt-2 text-xl font-bold leading-8 text-[#061b3a]">
+                <h4 className="mt-2 text-lg font-bold leading-8 text-[#061b3a] sm:text-xl">
                   {currentQuestion.question}
                 </h4>
               </div>
 
-              <div className="rounded-2xl bg-[#f5f8fd] px-4 py-3 text-sm font-bold text-[#061b3a]">
-                Contestadas: {answeredQuestions}/{finalEvaluation.questions.length}
+              <div className="w-full rounded-2xl bg-[#f5f8fd] px-4 py-3 text-center text-sm font-bold text-[#061b3a] md:w-auto">
+                Contestadas: {answeredQuestions}/{totalQuestions}
               </div>
             </div>
 
@@ -413,12 +729,15 @@ export function FinalEvaluationPanel({
                     key={option}
                     type="button"
                     onClick={() =>
-                      handleSelectAnswer(currentQuestionIndex, option)
+                      handleSelectAnswer(
+                        currentQuestionOriginalIndex,
+                        option
+                      )
                     }
                     className={
                       selected
-                        ? "w-full rounded-2xl border border-[#0b376d] bg-blue-50 p-4 text-left text-sm font-bold text-[#061b3a]"
-                        : "w-full rounded-2xl border border-slate-200 bg-[#f8fafc] p-4 text-left text-sm font-semibold text-slate-600 hover:bg-blue-50"
+                        ? "w-full rounded-2xl border border-[#0b376d] bg-[#eaf2ff] p-4 text-left text-sm font-bold leading-6 text-[#061b3a]"
+                        : "w-full rounded-2xl border border-slate-200 bg-[#f8fafc] p-4 text-left text-sm font-semibold leading-6 text-slate-600 transition hover:border-[#b8c9e6] hover:bg-[#eaf2ff]"
                     }
                   >
                     {option}
@@ -427,67 +746,65 @@ export function FinalEvaluationPanel({
               })}
             </div>
 
-            <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 md:flex-row md:items-center md:justify-between">
+            <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
               <button
                 type="button"
                 onClick={handlePreviousQuestion}
                 disabled={isFirstQuestion}
                 className={
                   isFirstQuestion
-                    ? "rounded-2xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-bold text-slate-400"
-                    : "rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-[#061b3a] hover:bg-slate-50"
+                    ? "w-full cursor-not-allowed rounded-2xl border border-slate-200 bg-slate-100 px-5 py-3 text-sm font-bold text-slate-400 sm:w-auto"
+                    : "w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-[#061b3a] transition hover:bg-slate-50 sm:w-auto"
                 }
               >
                 ← Anterior
               </button>
 
-              <div className="flex flex-col gap-3 sm:flex-row">
-                {!isLastQuestion ? (
-                  <button
-                    type="button"
-                    onClick={handleNextQuestion}
-                    className="rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white hover:bg-[#061b3a]"
-                  >
-                    Siguiente →
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={handleGoToSummary}
-                    disabled={answeredQuestions < finalEvaluation.questions.length}
-                    className={
-                      answeredQuestions < finalEvaluation.questions.length
-                        ? "cursor-not-allowed rounded-2xl bg-slate-300 px-6 py-3 text-sm font-bold text-white"
-                        : "rounded-2xl bg-[#c78b3a] px-6 py-3 text-sm font-bold text-white hover:bg-[#a66f24]"
-                    }
-                  >
-                    {answeredQuestions < finalEvaluation.questions.length
-                      ? "Responde todas"
-                      : "Revisar y enviar"}
-                  </button>
-                )}
-              </div>
+              {!isLastQuestion ? (
+                <button
+                  type="button"
+                  onClick={handleNextQuestion}
+                  className="w-full rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a] sm:w-auto"
+                >
+                  Siguiente →
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleGoToSummary}
+                  disabled={answeredQuestions !== totalQuestions}
+                  className={
+                    answeredQuestions !== totalQuestions
+                      ? "w-full cursor-not-allowed rounded-2xl bg-slate-300 px-5 py-3 text-sm font-bold text-white sm:w-auto"
+                      : "w-full rounded-2xl bg-[#c78b3a] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a66f24] sm:w-auto"
+                  }
+                >
+                  {answeredQuestions !== totalQuestions
+                    ? "Responde todas"
+                    : "Revisar y enviar"}
+                </button>
+              )}
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-10 gap-2">
-            {finalEvaluation.questions.map((_, index) => {
-              const answered = Boolean(selectedAnswers[index]);
-              const active = index === currentQuestionIndex;
+          <div className="mt-5 flex flex-wrap gap-2">
+            {questionOrder.map((originalIndex, position) => {
+              const answered = Boolean(selectedAnswers[originalIndex]);
+              const active = position === currentQuestionPosition;
 
               return (
                 <button
-                  key={index}
+                  key={originalIndex}
                   type="button"
-                  onClick={() => setCurrentQuestionIndex(index)}
+                  onClick={() => setCurrentQuestionPosition(position)}
                   className={
                     active
-                      ? "h-3 rounded-full bg-[#0b376d]"
+                      ? "h-3 min-w-8 flex-1 rounded-full bg-[#0b376d]"
                       : answered
-                        ? "h-3 rounded-full bg-[#c78b3a]"
-                        : "h-3 rounded-full bg-slate-300"
+                        ? "h-3 min-w-8 flex-1 rounded-full bg-[#c78b3a]"
+                        : "h-3 min-w-8 flex-1 rounded-full bg-slate-300"
                   }
-                  aria-label={`Ir a pregunta ${index + 1}`}
+                  aria-label={`Ir a pregunta ${position + 1}`}
                 />
               );
             })}
@@ -496,7 +813,7 @@ export function FinalEvaluationPanel({
       )}
 
       {view === "summary" && (
-        <div className="mt-6 rounded-3xl bg-white p-6">
+        <div className="mt-6 rounded-3xl bg-white p-5 sm:p-5">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a]">
             Resumen antes de enviar
           </p>
@@ -505,11 +822,12 @@ export function FinalEvaluationPanel({
             Confirma tu evaluación
           </h4>
 
-          <div className="mt-5 grid gap-3 md:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-3">
             <div className="rounded-2xl bg-[#f5f8fd] p-4">
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                 Contestadas
               </p>
+
               <p className="mt-1 text-xl font-black text-[#061b3a]">
                 {answeredQuestions}
               </p>
@@ -519,6 +837,7 @@ export function FinalEvaluationPanel({
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                 Pendientes
               </p>
+
               <p className="mt-1 text-xl font-black text-[#061b3a]">
                 {pendingQuestions}
               </p>
@@ -528,6 +847,7 @@ export function FinalEvaluationPanel({
               <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
                 Tiempo restante
               </p>
+
               <p className="mt-1 text-xl font-black text-[#061b3a]">
                 {formattedTime}
               </p>
@@ -535,15 +855,15 @@ export function FinalEvaluationPanel({
           </div>
 
           <p className="mt-5 text-sm leading-7 text-slate-600">
-            Al enviar, este intento quedará registrado. No se mostrarán las
-            respuestas correctas para conservar la validez del segundo intento.
+            Al enviar, este intento quedará registrado. Se conservará el mayor
+            número de aciertos obtenido entre los intentos realizados.
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
             <button
               type="button"
               onClick={() => setView("questions")}
-              className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-[#061b3a] hover:bg-slate-50"
+              className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-[#061b3a] transition hover:bg-slate-50 sm:w-auto"
             >
               Regresar a revisar
             </button>
@@ -551,7 +871,12 @@ export function FinalEvaluationPanel({
             <button
               type="button"
               onClick={finishEvaluation}
-              className="rounded-2xl bg-[#c78b3a] px-6 py-3 text-sm font-bold text-white hover:bg-[#a66f24]"
+              disabled={answeredQuestions !== totalQuestions}
+              className={
+                answeredQuestions !== totalQuestions
+                  ? "w-full cursor-not-allowed rounded-2xl bg-slate-300 px-5 py-3 text-sm font-bold text-white sm:w-auto"
+                  : "w-full rounded-2xl bg-[#c78b3a] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a66f24] sm:w-auto"
+              }
             >
               Enviar evaluación
             </button>
@@ -560,7 +885,7 @@ export function FinalEvaluationPanel({
       )}
 
       {view === "result" && result && (
-        <div className="mt-6 rounded-3xl bg-white p-6">
+        <div className="mt-6 rounded-3xl bg-white p-5 sm:p-5">
           <p
             className={
               result.approved
@@ -568,18 +893,36 @@ export function FinalEvaluationPanel({
                 : "text-sm font-bold uppercase tracking-[0.25em] text-red-600"
             }
           >
-            {result.approved ? "Evaluación aprobada" : "Evaluación no aprobada"}
+            {result.approved
+              ? "Evaluación aprobada"
+              : "Evaluación no aprobada"}
           </p>
 
           <h4 className="mt-3 text-2xl font-black text-[#061b3a]">
-            Resultado: {result.correctAnswers} correctas y{" "}
+            Resultado del intento: {result.correctAnswers} correctas y{" "}
             {result.wrongAnswers} incorrectas
           </h4>
 
           <p className="mt-3 text-sm leading-7 text-slate-600">
             Intento registrado: {result.attemptNumber} de{" "}
-            {finalEvaluation.maxAttempts}.
+            {finalEvaluation.maxAttempts}. Fecha:{" "}
+            {formatAttemptDate(result.completedAt)}.
           </p>
+
+          <div className="mt-5 rounded-3xl border border-[#b8c9e6] bg-[#eaf2ff] p-5">
+            <p className="text-sm font-bold uppercase tracking-[0.2em] text-[#0b376d]">
+              Mejor resultado de la evaluación final
+            </p>
+
+            <p className="mt-2 text-2xl font-black text-[#061b3a]">
+              {result.bestCorrectAnswers}/{totalQuestions}
+            </p>
+
+            <p className="mt-2 text-sm leading-6 text-slate-600">
+              La Evaluación 1 y la Evaluación 2 funcionan como checkpoints de
+              avance y no se suman para determinar la insignia.
+            </p>
+          </div>
 
           <div
             className={`mt-5 rounded-3xl border p-5 ${getBadgeStyles(
@@ -587,7 +930,7 @@ export function FinalEvaluationPanel({
             )}`}
           >
             <p className="text-sm font-bold uppercase tracking-[0.2em]">
-              Insignia obtenida
+              Resultado de insignia
             </p>
 
             <p className="mt-2 text-2xl font-black">
@@ -595,33 +938,75 @@ export function FinalEvaluationPanel({
             </p>
           </div>
 
+          {progress.attempts.length > 0 && (
+            <div className="mt-5 rounded-3xl border border-slate-200 bg-[#f8fafc] p-5">
+              <p className="text-sm font-bold uppercase tracking-[0.2em] text-slate-500">
+                Historial de intentos
+              </p>
+
+              <div className="mt-4 space-y-3">
+                {progress.attempts.map((attempt) => (
+                  <div
+                    key={`${attempt.attemptNumber}-${attempt.completedAt}`}
+                    className="flex flex-col gap-2 rounded-2xl bg-white p-4 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div>
+                      <p className="font-bold text-[#061b3a]">
+                        Intento {attempt.attemptNumber}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-500">
+                        {formatAttemptDate(attempt.completedAt)}
+                      </p>
+                    </div>
+
+                    <p
+                      className={
+                        attempt.approved
+                          ? "text-sm font-black text-emerald-600"
+                          : "text-sm font-black text-red-600"
+                      }
+                    >
+                      {attempt.correctAnswers}/{totalQuestions} aciertos
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            {!result.approved && attemptsUsed < finalEvaluation.maxAttempts && (
-              <button
-                type="button"
-                onClick={handleRetry}
-                className="rounded-2xl bg-[#0b376d] px-6 py-3 text-sm font-bold text-white hover:bg-[#061b3a]"
-              >
-                Intentar nuevamente
-              </button>
+            {!result.approved &&
+              progress.attemptsUsed < finalEvaluation.maxAttempts && (
+                <button
+                  type="button"
+                  onClick={handleRetry}
+                  className="w-full rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a] sm:w-auto"
+                >
+                  Realizar segundo intento
+                </button>
+              )}
+
+            {!result.approved && attemptsExhausted && (
+              <>
+                <Link
+                  href="/herramientas-digitales/onedrive/descubre/paso-1"
+                  className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3 text-center text-sm font-bold text-[#061b3a] transition hover:bg-slate-50 sm:w-auto"
+                >
+                  Repasar ruta
+                </Link>
+
+                <div className="w-full rounded-2xl bg-amber-100 px-5 py-3 text-center text-sm font-bold text-amber-800 sm:w-auto">
+                  Solicitud de reinicio disponible
+                </div>
+              </>
             )}
 
-            {!result.approved && attemptsUsed >= finalEvaluation.maxAttempts && (
-              <a
-                href="/herramientas-digitales/onedrive/descubre/paso-1"
-                className="rounded-2xl bg-[#0b376d] px-6 py-3 text-center text-sm font-bold text-white hover:bg-[#061b3a]"
-              >
-                Repasar ruta
-              </a>
+            {result.approved && (
+              <div className="w-full rounded-2xl bg-emerald-600 px-5 py-3 text-center text-sm font-bold text-white sm:w-auto">
+                Ruta completada
+              </div>
             )}
-
-            <button
-              type="button"
-              onClick={handleResetFinalEvaluation}
-              className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-sm font-bold text-slate-500 hover:bg-slate-50"
-            >
-              Reiniciar evaluación final
-            </button>
           </div>
         </div>
       )}

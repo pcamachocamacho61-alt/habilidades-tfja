@@ -4,7 +4,8 @@ export const digitalTools: DigitalTool[] = [
   {
     id: "onedrive",
     name: "OneDrive",
-    description: "Archivos en la nube y trabajo colaborativo.",
+    description:
+      "Almacena, organiza, comparte y consulta archivos de forma segura en la nube.",
     icon: "/tools/onedrive.png",
     descubreProgress: 0,
     potenciaProgress: 0,
@@ -13,7 +14,8 @@ export const digitalTools: DigitalTool[] = [
   {
     id: "outlook",
     name: "Outlook",
-    description: "Correo, calendario y organización diaria.",
+    description:
+      "Administra el correo institucional, el calendario, los contactos y la organización diaria.",
     icon: "/tools/outlook.png",
     descubreProgress: 0,
     potenciaProgress: 0,
@@ -22,16 +24,18 @@ export const digitalTools: DigitalTool[] = [
   {
     id: "teams",
     name: "Teams",
-    description: "Reuniones, chats y colaboración.",
+    description:
+      "Participa en reuniones, conversaciones y espacios de colaboración institucional.",
     icon: "/tools/teams.png",
     descubreProgress: 0,
     potenciaProgress: 0,
-    status: "coming-soon",
+    status: "active",
   },
   {
     id: "excel",
     name: "Excel",
-    description: "Hojas de cálculo y análisis de información.",
+    description:
+      "Organiza, calcula y analiza información mediante hojas de cálculo.",
     icon: "/tools/excel.png",
     descubreProgress: 0,
     potenciaProgress: 0,
@@ -40,10 +44,11 @@ export const digitalTools: DigitalTool[] = [
   {
     id: "word",
     name: "Word",
-    description: "Documentos, formatos y colaboración.",
+    description:
+      "Crea, edita, revisa y comparte documentos de trabajo.",
     icon: "/tools/word.png",
     descubreProgress: 0,
     potenciaProgress: 0,
-    status: "coming-soon",
+    status: "active",
   },
 ];

@@ -9,41 +9,87 @@ import { getOneDriveBadgeInfo } from "@/lib/badges";
 
 const COMPLETED_KEY = "habilidades-tfja:onedrive-descubre:completed";
 const BADGE_KEY = "habilidades-tfja:onedrive-descubre:badge";
+const FINAL_RESULT_KEY =
+  "htfja-final-onedrive-descubre-evaluacion-final-result";
+const COURSE_UPDATED_EVENT = "habilidades-tfja:course-updated";
+const BADGE_UPDATED_EVENT = "habilidades-tfja:badge-updated";
 
 export function OneDriveStatusCard() {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [badgeValue, setBadgeValue] = useState<string | null>(null);
+  const [finalApproved, setFinalApproved] = useState(false);
 
   useEffect(() => {
-    const savedCompleted = window.localStorage.getItem(COMPLETED_KEY);
-    const savedBadge = window.localStorage.getItem(BADGE_KEY);
+    function loadStatus() {
+      try {
+        const savedCompleted = window.localStorage.getItem(COMPLETED_KEY);
+        const savedBadge = window.localStorage.getItem(BADGE_KEY);
+        const savedResult = window.localStorage.getItem(FINAL_RESULT_KEY);
 
-    if (savedCompleted) {
-      setCompletedIds(JSON.parse(savedCompleted));
+        const parsedCompleted = savedCompleted
+          ? (JSON.parse(savedCompleted) as unknown)
+          : [];
+
+        setCompletedIds(
+          Array.isArray(parsedCompleted)
+            ? parsedCompleted.filter(
+                (value): value is string => typeof value === "string"
+              )
+            : []
+        );
+        setBadgeValue(savedBadge);
+
+        if (savedResult) {
+          const parsedResult = JSON.parse(savedResult) as {
+            approved?: boolean;
+          };
+          setFinalApproved(Boolean(parsedResult.approved));
+        } else {
+          setFinalApproved(false);
+        }
+      } catch {
+        setCompletedIds([]);
+        setBadgeValue(null);
+        setFinalApproved(false);
+      }
     }
 
-    if (savedBadge) {
-      setBadgeValue(savedBadge);
-    }
+    loadStatus();
+    window.addEventListener("storage", loadStatus);
+    window.addEventListener(COURSE_UPDATED_EVENT, loadStatus);
+    window.addEventListener(BADGE_UPDATED_EVENT, loadStatus);
+
+    return () => {
+      window.removeEventListener("storage", loadStatus);
+      window.removeEventListener(COURSE_UPDATED_EVENT, loadStatus);
+      window.removeEventListener(BADGE_UPDATED_EVENT, loadStatus);
+    };
   }, []);
 
   const progress = useMemo(() => {
-    if (onedriveDescubreSteps.length === 0) {
+    const mandatoryIds = new Set(onedriveDescubreSteps.map((step) => step.id));
+
+    if (mandatoryIds.size === 0) {
       return 0;
     }
 
-    return Math.round(
-      (completedIds.length / onedriveDescubreSteps.length) * 100
+    const completedMandatoryIds = new Set(
+      completedIds.filter((id) => mandatoryIds.has(id))
     );
-  }, [completedIds.length]);
 
-  const badgeInfo = getOneDriveBadgeInfo(badgeValue);
+    return Math.min(
+      100,
+      Math.round((completedMandatoryIds.size / mandatoryIds.size) * 100)
+    );
+  }, [completedIds]);
 
-  const routeCompleted = progress === 100;
+  const badgeInfo = finalApproved
+    ? getOneDriveBadgeInfo(badgeValue)
+    : null;
 
   return (
-    <div className="mt-8 rounded-[32px] border border-white bg-white/90 p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+    <div className="mt-6 rounded-[28px] border border-white bg-white/90 p-5 shadow-[0_18px_55px_rgba(15,23,42,0.08)] sm:p-5">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex-1">
           <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a]">
             Estado de ruta
@@ -54,27 +100,31 @@ export function OneDriveStatusCard() {
           </h2>
 
           <p className="mt-3 text-sm leading-7 text-slate-600">
-            Consulta tu avance actual dentro de la ruta inicial de OneDrive.
+            Consulta tu avance y el resultado de la evaluación final.
           </p>
 
           <div className="mt-5 max-w-xl">
             <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-600">
-              <span>Avance de ruta</span>
+              <span>Avance de elementos obligatorios</span>
               <span>{progress}%</span>
             </div>
 
-            <ProgressBar value={progress} variant="blue" />
+            <ProgressBar
+              value={progress}
+              variant="blue"
+              label="Avance de OneDrive Descubre"
+            />
           </div>
 
           <div className="mt-5 flex flex-wrap gap-3">
             <span
               className={
-                routeCompleted
+                finalApproved
                   ? "rounded-full bg-emerald-50 px-4 py-2 text-xs font-bold text-emerald-700"
                   : "rounded-full bg-blue-50 px-4 py-2 text-xs font-bold text-blue-700"
               }
             >
-              {routeCompleted ? "Ruta completada" : "Ruta en progreso"}
+              {finalApproved ? "Ruta completada" : "Ruta en progreso"}
             </span>
 
             {badgeInfo ? (
@@ -96,25 +146,25 @@ export function OneDriveStatusCard() {
               alt={badgeInfo.title}
               width={150}
               height={150}
-              className="h-auto w-[150px]"
+              className="h-auto w-[130px] sm:w-[150px]"
             />
 
             <Link
               href="/herramientas-digitales/insignias"
-              className="mt-4 rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white hover:bg-[#061b3a]"
+              className="mt-4 rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a]"
             >
               Ver insignia
             </Link>
           </div>
         ) : (
-          <div className="rounded-3xl border border-dashed border-slate-300 bg-[#f5f8fd] p-6 text-center">
+          <div className="rounded-3xl border border-dashed border-slate-300 bg-[#f5f8fd] p-5 text-center">
             <p className="text-sm font-bold text-slate-500">
-              Completa la evaluación final para obtener una insignia.
+              Completa los elementos obligatorios y aprueba la evaluación final.
             </p>
 
             <Link
               href="/herramientas-digitales/onedrive/descubre/evaluacion-final"
-              className="mt-4 inline-flex rounded-2xl bg-[#c78b3a] px-5 py-3 text-sm font-bold text-white hover:bg-[#a66f24]"
+              className="mt-4 inline-flex rounded-2xl bg-[#c78b3a] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#a66f24]"
             >
               Ir a evaluación
             </Link>

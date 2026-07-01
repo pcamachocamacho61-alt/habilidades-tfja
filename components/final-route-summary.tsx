@@ -1,124 +1,196 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { onedriveDescubreSteps } from "@/data/onedrive-descubre";
 import { ProgressBar } from "@/components/progress-bar";
 import { getOneDriveBadgeInfo } from "@/lib/badges";
+import { BadgeType } from "@/types/learning";
 
 type FinalResult = {
   correctAnswers: number;
   wrongAnswers: number;
   approved: boolean;
-  badge: "gold" | "silver" | "bronze" | null;
+  badge: BadgeType;
   attemptNumber: number;
+  bestCorrectAnswers?: number;
+  accumulatedCorrectAnswers?: number;
+  completedAt?: string;
 };
 
 const COMPLETED_KEY = "habilidades-tfja:onedrive-descubre:completed";
-const RESULT_KEY = "habilidades-tfja:onedrive-descubre:final-result";
+const RESULT_KEY =
+  "htfja-final-onedrive-descubre-evaluacion-final-result";
 const BADGE_KEY = "habilidades-tfja:onedrive-descubre:badge";
+
+function isBadge(value: unknown): value is BadgeType {
+  return (
+    value === "gold" ||
+    value === "silver" ||
+    value === "bronze" ||
+    value === "repeat"
+  );
+}
 
 export function FinalRouteSummary() {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [result, setResult] = useState<FinalResult | null>(null);
-  const [badgeValue, setBadgeValue] = useState<string | null>(null);
+  const [badgeValue, setBadgeValue] = useState<BadgeType | null>(null);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const savedCompleted = window.localStorage.getItem(COMPLETED_KEY);
-    const savedResult = window.localStorage.getItem(RESULT_KEY);
-    const savedBadge = window.localStorage.getItem(BADGE_KEY);
+    try {
+      const completed = window.localStorage.getItem(COMPLETED_KEY);
+      const storedResult = window.localStorage.getItem(RESULT_KEY);
+      const storedBadge = window.localStorage.getItem(BADGE_KEY);
 
-    if (savedCompleted) {
-      setCompletedIds(JSON.parse(savedCompleted));
-    }
+      if (completed) {
+        const parsed = JSON.parse(completed) as unknown;
 
-    if (savedResult) {
-      setResult(JSON.parse(savedResult));
-    }
+        if (Array.isArray(parsed)) {
+          setCompletedIds(
+            parsed.filter(
+              (item): item is string => typeof item === "string"
+            )
+          );
+        }
+      }
 
-    if (savedBadge) {
-      setBadgeValue(savedBadge);
+      if (storedResult) {
+        setResult(JSON.parse(storedResult) as FinalResult);
+      }
+
+      if (isBadge(storedBadge)) {
+        setBadgeValue(storedBadge);
+      }
+    } catch {
+      setCompletedIds([]);
+      setResult(null);
+      setBadgeValue(null);
+    } finally {
+      setLoaded(true);
     }
   }, []);
 
   const progress = useMemo(() => {
-    if (onedriveDescubreSteps.length === 0) {
-      return 0;
-    }
-
-    return Math.round(
-      (completedIds.length / onedriveDescubreSteps.length) * 100
+    const routeIds = new Set(
+      onedriveDescubreSteps.map((step) => step.id)
     );
-  }, [completedIds.length]);
 
-  const badgeInfo = getOneDriveBadgeInfo(badgeValue);
+    const completed = [...new Set(completedIds)].filter((id) =>
+      routeIds.has(id)
+    ).length;
+
+    return onedriveDescubreSteps.length
+      ? Math.min(
+          100,
+          Math.round(
+            (completed / onedriveDescubreSteps.length) * 100
+          )
+        )
+      : 0;
+  }, [completedIds]);
+
+  if (!loaded) {
+    return (
+      <div className="mt-6 rounded-[28px] bg-white p-5">
+        <p className="text-sm font-bold text-slate-600">
+          Cargando resumen...
+        </p>
+      </div>
+    );
+  }
+
+  const bestScore =
+    result?.bestCorrectAnswers ??
+    result?.accumulatedCorrectAnswers ??
+    result?.correctAnswers ??
+    0;
+
+  const displayCorrectAnswers = result ? bestScore : null;
+  const displayWrongAnswers = result
+    ? Math.max(10 - bestScore, 0)
+    : null;
+
+  const badge = result?.badge ?? badgeValue;
+  const badgeInfo =
+    badge && badge !== "repeat"
+      ? getOneDriveBadgeInfo(badge)
+      : null;
 
   return (
-    <div className="mt-8 rounded-[32px] border border-white bg-white/90 p-6 shadow-[0_18px_55px_rgba(15,23,42,0.08)]">
-      <div className="grid gap-6 lg:grid-cols-[1fr_260px] lg:items-center">
-        <div>
-          <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a]">
+    <div className="mt-6 rounded-[28px] border border-white bg-white/90 p-4 shadow-[0_18px_55px_rgba(15,23,42,0.08)] sm:p-5">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center">
+        <div className="min-w-0">
+          <p className="text-center text-sm font-bold uppercase tracking-[0.25em] text-[#c78b3a] lg:text-left">
             Resumen de cierre
           </p>
 
-          <h2 className="mt-3 text-3xl font-black text-[#061b3a]">
+          <h2 className="mt-3 text-center text-2xl font-black text-[#061b3a] lg:text-left">
             Avance final de la ruta
           </h2>
 
-          <div className="mt-5 max-w-xl">
-            <div className="mb-2 flex items-center justify-between text-sm font-bold text-slate-600">
+          <div className="mt-5 w-full">
+            <div className="mb-2 flex items-center justify-between gap-4 text-sm font-bold text-slate-600">
               <span>Progreso OneDrive Descubre</span>
               <span>{progress}%</span>
             </div>
 
-            <ProgressBar value={progress} variant="blue" />
+            <ProgressBar
+              value={progress}
+              variant="blue"
+              label="Progreso final de OneDrive Descubre"
+            />
           </div>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            <div className="rounded-2xl bg-[#f5f8fd] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+          <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="flex min-h-[112px] flex-col items-center justify-center rounded-2xl bg-[#f5f8fd] px-3 py-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
                 Correctas
               </p>
-              <p className="mt-1 text-2xl font-black text-emerald-600">
-                {result ? result.correctAnswers : "-"}
+
+              <p className="mt-2 text-2xl font-black text-emerald-600">
+                {displayCorrectAnswers ?? "-"}
               </p>
             </div>
 
-            <div className="rounded-2xl bg-[#f5f8fd] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+            <div className="flex min-h-[112px] flex-col items-center justify-center rounded-2xl bg-[#f5f8fd] px-3 py-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
                 Incorrectas
               </p>
-              <p className="mt-1 text-2xl font-black text-red-600">
-                {result ? result.wrongAnswers : "-"}
+
+              <p className="mt-2 text-2xl font-black text-red-600">
+                {displayWrongAnswers ?? "-"}
               </p>
             </div>
 
-            <div className="rounded-2xl bg-[#f5f8fd] p-4">
-              <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+            <div className="flex min-h-[112px] flex-col items-center justify-center rounded-2xl bg-[#f5f8fd] px-3 py-4 text-center">
+              <p className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
                 Intento
               </p>
-              <p className="mt-1 text-2xl font-black text-[#061b3a]">
+
+              <p className="mt-2 text-2xl font-black text-[#061b3a]">
                 {result ? result.attemptNumber : "-"}
               </p>
             </div>
+
+            <div className="flex min-h-[112px] flex-col items-center justify-center rounded-2xl bg-[#f5f8fd] px-3 py-4 text-center">
+              <p className="max-w-[110px] text-xs font-bold uppercase leading-5 tracking-[0.16em] text-slate-400">
+                Mejor resultado
+              </p>
+
+              <p className="mt-2 text-2xl font-black text-[#061b3a]">
+                {result ? `${bestScore}/10` : "-"}
+              </p>
+            </div>
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-            <Link
-              href="/herramientas-digitales/insignias"
-              className="rounded-2xl bg-[#0b376d] px-6 py-3 text-center text-sm font-bold text-white hover:bg-[#061b3a]"
-            >
-              Ver mis insignias
-            </Link>
+          <p className="mx-auto mt-5 max-w-2xl text-center text-sm leading-6 text-slate-500 lg:mx-0 lg:text-left">
+            La insignia se calcula únicamente con el mejor resultado de la
+            evaluación final de 10 preguntas. Las Evaluaciones 1 y 2 solo
+            funcionan como checkpoints de avance.
+          </p>
 
-            <Link
-              href="/herramientas-digitales"
-              className="rounded-2xl border border-slate-200 bg-white px-6 py-3 text-center text-sm font-bold text-[#061b3a] hover:bg-slate-50"
-            >
-              Regresar a herramientas digitales
-            </Link>
-          </div>
         </div>
 
         {badgeInfo ? (
@@ -128,8 +200,7 @@ export function FinalRouteSummary() {
               alt={badgeInfo.title}
               width={210}
               height={210}
-              loading="eager"
-              className="mx-auto h-auto w-[210px]"
+              className="mx-auto h-auto w-[210px] max-w-full"
             />
 
             <p className="mt-4 text-sm font-bold uppercase tracking-[0.2em] text-[#c78b3a]">
@@ -143,7 +214,9 @@ export function FinalRouteSummary() {
         ) : (
           <div className="rounded-3xl border border-dashed border-slate-300 bg-[#f5f8fd] p-5 text-center">
             <p className="text-sm font-bold text-slate-500">
-              No se encontró insignia registrada.
+              {badge === "repeat"
+                ? "Resultado: Repetir ruta"
+                : "No se encontró insignia registrada."}
             </p>
           </div>
         )}

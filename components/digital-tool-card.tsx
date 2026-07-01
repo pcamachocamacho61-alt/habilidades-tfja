@@ -14,10 +14,19 @@ type DigitalToolCardProps = {
 
 const COMPLETED_KEY = "habilidades-tfja:onedrive-descubre:completed";
 const BADGE_KEY = "habilidades-tfja:onedrive-descubre:badge";
+const FINAL_RESULT_KEY =
+  "htfja-final-onedrive-descubre-evaluacion-final-result";
+const COURSE_UPDATED_EVENT = "habilidades-tfja:course-updated";
+const BADGE_UPDATED_EVENT = "habilidades-tfja:badge-updated";
+
+function clampProgress(value: number): number {
+  return Math.min(100, Math.max(0, Number.isFinite(value) ? value : 0));
+}
 
 export function DigitalToolCard({ tool }: DigitalToolCardProps) {
   const [completedIds, setCompletedIds] = useState<string[]>([]);
   const [badgeValue, setBadgeValue] = useState<string | null>(null);
+  const [finalApproved, setFinalApproved] = useState(false);
 
   const isComingSoon = tool.status === "coming-soon";
 
@@ -26,33 +35,77 @@ export function DigitalToolCard({ tool }: DigitalToolCardProps) {
       return;
     }
 
-    const savedCompleted = window.localStorage.getItem(COMPLETED_KEY);
-    const savedBadge = window.localStorage.getItem(BADGE_KEY);
+    function loadStatus() {
+      try {
+        const savedCompleted = window.localStorage.getItem(COMPLETED_KEY);
+        const savedBadge = window.localStorage.getItem(BADGE_KEY);
+        const savedResult = window.localStorage.getItem(FINAL_RESULT_KEY);
 
-    if (savedCompleted) {
-      setCompletedIds(JSON.parse(savedCompleted));
+        const parsedCompleted = savedCompleted
+          ? (JSON.parse(savedCompleted) as unknown)
+          : [];
+
+        setCompletedIds(
+          Array.isArray(parsedCompleted)
+            ? parsedCompleted.filter(
+                (value): value is string => typeof value === "string"
+              )
+            : []
+        );
+        setBadgeValue(savedBadge);
+
+        if (savedResult) {
+          const parsedResult = JSON.parse(savedResult) as {
+            approved?: boolean;
+          };
+          setFinalApproved(Boolean(parsedResult.approved));
+        } else {
+          setFinalApproved(false);
+        }
+      } catch {
+        setCompletedIds([]);
+        setBadgeValue(null);
+        setFinalApproved(false);
+      }
     }
 
-    if (savedBadge) {
-      setBadgeValue(savedBadge);
-    }
+    loadStatus();
+    window.addEventListener("storage", loadStatus);
+    window.addEventListener(COURSE_UPDATED_EVENT, loadStatus);
+    window.addEventListener(BADGE_UPDATED_EVENT, loadStatus);
+
+    return () => {
+      window.removeEventListener("storage", loadStatus);
+      window.removeEventListener(COURSE_UPDATED_EVENT, loadStatus);
+      window.removeEventListener(BADGE_UPDATED_EVENT, loadStatus);
+    };
   }, [tool.id]);
 
-  const onedriveProgress = useMemo(() => {
+  const descubreProgress = useMemo(() => {
     if (tool.id !== "onedrive") {
-      return tool.descubreProgress;
+      return clampProgress(tool.descubreProgress);
     }
 
-    if (onedriveDescubreSteps.length === 0) {
+    const mandatoryIds = new Set(onedriveDescubreSteps.map((step) => step.id));
+
+    if (mandatoryIds.size === 0) {
       return 0;
     }
 
-    return Math.round(
-      (completedIds.length / onedriveDescubreSteps.length) * 100
+    const completedMandatoryIds = new Set(
+      completedIds.filter((id) => mandatoryIds.has(id))
     );
-  }, [completedIds.length, tool.descubreProgress, tool.id]);
 
-  const badgeInfo = getOneDriveBadgeInfo(badgeValue);
+    return clampProgress(
+      Math.round((completedMandatoryIds.size / mandatoryIds.size) * 100)
+    );
+  }, [completedIds, tool.descubreProgress, tool.id]);
+
+  const potenciaProgress = clampProgress(tool.potenciaProgress);
+  const badgeInfo =
+    tool.id === "onedrive" && finalApproved
+      ? getOneDriveBadgeInfo(badgeValue)
+      : null;
 
   const cardContent = (
     <div
@@ -90,21 +143,29 @@ export function DigitalToolCard({ tool }: DigitalToolCardProps) {
         <div>
           <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#0b376d]">
             <span>Descubre</span>
-            <span>{onedriveProgress}%</span>
+            <span>{descubreProgress}%</span>
           </div>
-          <ProgressBar value={onedriveProgress} variant="blue" />
+          <ProgressBar
+            value={descubreProgress}
+            variant="blue"
+            label={`Avance Descubre de ${tool.name}`}
+          />
         </div>
 
         <div>
           <div className="mb-2 flex items-center justify-between text-xs font-semibold text-[#a66f24]">
             <span>Potencia</span>
-            <span>{tool.potenciaProgress}%</span>
+            <span>{potenciaProgress}%</span>
           </div>
-          <ProgressBar value={tool.potenciaProgress} variant="bronze" />
+          <ProgressBar
+            value={potenciaProgress}
+            variant="bronze"
+            label={`Avance Potencia de ${tool.name}`}
+          />
         </div>
       </div>
 
-      {tool.id === "onedrive" && badgeInfo && (
+      {badgeInfo && (
         <div className="mt-4 rounded-2xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
           Insignia: {badgeInfo.title}
         </div>
@@ -112,7 +173,7 @@ export function DigitalToolCard({ tool }: DigitalToolCardProps) {
 
       {isComingSoon && (
         <p className="mt-4 text-xs font-semibold text-slate-500">
-          Esta ruta será habilitada en una siguiente etapa.
+          Esta herramienta aún no tiene contenido habilitado.
         </p>
       )}
     </div>
