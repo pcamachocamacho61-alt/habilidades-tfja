@@ -12,14 +12,19 @@ type StepPageProps = {
 };
 
 export default async function StepPage({ params }: StepPageProps) {
-  const { toolId, levelId, stepId } = await params;
+  const paramsValue = await params;
+  const toolId = decodeURIComponent(paramsValue.toolId).trim().toLowerCase();
+  const levelId = decodeURIComponent(paramsValue.levelId).trim().toLowerCase();
+  const stepId = decodeURIComponent(paramsValue.stepId).trim().toLowerCase();
   const route = getToolRoute(toolId, levelId);
 
   if (!route) {
     notFound();
   }
 
-  const step = route.steps.find((item) => item.id === stepId);
+  const step = route.steps.find(
+    (item) => item.id.trim().toLowerCase() === stepId
+  );
 
   if (!step) {
     notFound();

@@ -1,4 +1,5 @@
 import { LearningStep } from "@/types/learning";
+import { onedriveDescubreSteps } from "@/data/onedrive-descubre";
 
 export type ToolRouteConfig = {
   toolId: string;
@@ -4412,5 +4413,22 @@ export const toolRoutes: Record<string, ToolRouteConfig> = {
 } as Record<string, ToolRouteConfig>;
 
 export function getToolRoute(toolId: string, levelId: string): ToolRouteConfig | null {
-  return toolRoutes[`${toolId}-${levelId}`] ?? null;
+  const normalizedToolId = toolId.trim().toLowerCase();
+  const normalizedLevelId = levelId.trim().toLowerCase();
+
+  // OneDrive Descubre usa una sola fuente canónica de pasos.
+  // Esto evita que el menú lateral y la página dinámica trabajen con
+  // identificadores distintos después de una actualización o rebase.
+  if (normalizedToolId === "onedrive" && normalizedLevelId === "descubre") {
+    return {
+      toolId: "onedrive",
+      toolName: "OneDrive",
+      levelId: "descubre",
+      levelName: "Descubre",
+      routeId: "onedrive-descubre",
+      steps: onedriveDescubreSteps,
+    };
+  }
+
+  return toolRoutes[`${normalizedToolId}-${normalizedLevelId}`] ?? null;
 }

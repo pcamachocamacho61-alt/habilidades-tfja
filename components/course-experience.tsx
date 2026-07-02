@@ -158,11 +158,26 @@ export function CourseExperience({
         }
         const savedResetRequest = getResetRequest(routeId);
         if (savedResetRequest && active) setResetRequest(savedResetRequest);
-      } catch {
+      } catch (error) {
+        console.error("No fue posible cargar el avance desde MongoDB:", error);
+
         if (active) {
-          setCompletedIds([]);
-          setExhaustedEvaluationIds([]);
-          setResetRequest(null);
+          try {
+            const savedCompletedIds = window.localStorage.getItem(completedStorageKey);
+            const savedExhaustedIds = window.localStorage.getItem(exhaustedStorageKey);
+
+            setCompletedIds(
+              savedCompletedIds ? JSON.parse(savedCompletedIds) : []
+            );
+            setExhaustedEvaluationIds(
+              savedExhaustedIds ? JSON.parse(savedExhaustedIds) : []
+            );
+            setResetRequest(getResetRequest(routeId));
+          } catch {
+            setCompletedIds([]);
+            setExhaustedEvaluationIds([]);
+            setResetRequest(null);
+          }
         }
       } finally {
         if (active) setLoaded(true);
@@ -917,7 +932,7 @@ export function CourseExperience({
             <div>
               {previousStep ? (
                 <Link
-                  href={`${basePath}/${previousStep.id}`}
+                  href={`${basePath}/${encodeURIComponent(previousStep.id)}`}
                   className="inline-flex rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-[#061b3a] transition hover:bg-slate-50"
                 >
                   ← Anterior
@@ -933,7 +948,7 @@ export function CourseExperience({
               {nextStep ? (
                 canNavigateToNextStep ? (
                   <Link
-                    href={`${basePath}/${nextStep.id}`}
+                    href={`${basePath}/${encodeURIComponent(nextStep.id)}`}
                     className="inline-flex justify-center rounded-2xl bg-[#0b376d] px-5 py-3 text-sm font-bold text-white transition hover:bg-[#061b3a]"
                   >
                     Siguiente →

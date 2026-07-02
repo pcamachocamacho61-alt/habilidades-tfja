@@ -11,7 +11,9 @@ type LevelPageProps = {
 };
 
 export default async function LevelPage({ params }: LevelPageProps) {
-  const { toolId, levelId } = await params;
+  const paramsValue = await params;
+  const toolId = decodeURIComponent(paramsValue.toolId).trim().toLowerCase();
+  const levelId = decodeURIComponent(paramsValue.levelId).trim().toLowerCase();
   const route = getToolRoute(toolId, levelId);
 
   if (!route) {
